@@ -1,0 +1,74 @@
+# Pipeline que se ejecuta en cada pull request hacia "dev".
+# Si algún paso falla, el pull request queda en rojo y no se puede fusionar.
+name: Validar pull request
+
+on:
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:  # permite ejecutarlo a mano desde la pestaña "Actions"
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  validar:
+    name: Validar proyecto Godot
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Recuperar Godot de la caché
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Instalar Godot ${{ env.GODOT_VERSION }}
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          chmod +x ~/godot/godot
+
+      - name: Agregar Godot al PATH
+        run: |
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          ~/godot/godot --version
+
+      - name: "1) Importar el proyecto"
+        run: |
+          godot --headless --path . --import 2>&1 | tee importar.log
+          if grep -nE "(SCRIPT )?ERROR:" importar.log; then
+            echo "::error::Godot reportó errores al importar el proyecto."
+            exit 1
+          fi
+
+      - name: "2) Verificar que todos los scripts y escenas compilen"
+        run: |
+          godot --headless --path . -s res://tests/ci/verificar_scripts.gd 2>&1 | tee scripts.log
+          if grep -nE "(SCRIPT )?ERROR:" scripts.log; then
+            echo "::error::Hay scripts o escenas con errores."
+            exit 1
+          fi
+
+      - name: "3) Prueba de humo (jugar unos segundos en cada modo)"
+        run: |
+          godot --headless --path . --fixed-fps 60 -s res://tests/ci/prueba_humo.gd 2>&1 | tee humo.log
+          if grep -nE "(SCRIPT )?ERROR:" humo.log; then
+            echo "::error::El juego produjo errores durante la prueba de humo."
+            exit 1
+          fi
+
+      - name: Guardar los registros si algo falló
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registros-godot
+          path: "*.log"
