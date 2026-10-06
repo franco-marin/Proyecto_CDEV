@@ -1,0 +1,3 @@
+# Normaliza los saltos de línea para que los archivos de Godot no aparezcan
+# como "modificados" al cambiar entre Windows y otros sistemas.
+* text=auto eol=lf

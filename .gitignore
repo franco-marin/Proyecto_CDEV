@@ -1,0 +1,8 @@
+# Caché que Godot regenera solo al abrir el proyecto (no se sube a GitHub)
+.godot/
+
+# Exportaciones del juego
+/build/
+/android/
+*.exe
+*.pck

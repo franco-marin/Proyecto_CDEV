@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/fruta.gd" id="1_script"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_arbusto"]
+albedo_color = Color(0.2, 0.5, 0.18, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_fruta"]
+albedo_color = Color(0.9, 0.12, 0.15, 1)
+emission_enabled = true
+emission = Color(0.6, 0.05, 0.05, 1)
+emission_energy_multiplier = 0.6
+
+[sub_resource type="SphereMesh" id="Mesh_arbusto"]
+material = SubResource("Mat_arbusto")
+radius = 0.5
+height = 0.65
+
+[sub_resource type="SphereMesh" id="Mesh_fruta"]
+material = SubResource("Mat_fruta")
+radius = 0.13
+height = 0.26
+
+[sub_resource type="SphereShape3D" id="Forma"]
+radius = 0.9
+
+[node name="Fruta" type="Area3D" groups=["comida"]]
+collision_layer = 16
+collision_mask = 0
+monitoring = false
+script = ExtResource("1_script")
+
+[node name="Arbusto" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("Mesh_arbusto")
+
+[node name="Fruta1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.28, 0.5, 0.25)
+mesh = SubResource("Mesh_fruta")
+
+[node name="Fruta2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.45, 0.1)
+mesh = SubResource("Mesh_fruta")
+
+[node name="Fruta3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.62, -0.28)
+mesh = SubResource("Mesh_fruta")
+
+[node name="Colision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+shape = SubResource("Forma")

@@ -1,0 +1,440 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_script"]
+[ext_resource type="StandardMaterial3D" path="res://recursos/material_terreno.tres" id="2_mat_terreno"]
+[ext_resource type="PackedScene" path="res://escenas/jugador.tscn" id="3_jugador"]
+[ext_resource type="PackedScene" path="res://escenas/marcador.tscn" id="4_marcador"]
+[ext_resource type="Script" path="res://scripts/menu_pausa.gd" id="5_menu_pausa"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Entorno"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.62, 0.72, 0.68, 1)
+fog_density = 0.006
+
+[sub_resource type="NavigationMesh" id="NavMesh"]
+geometry_parsed_geometry_type = 1
+geometry_collision_mask = 3
+cell_size = 0.25
+agent_radius = 0.75
+agent_height = 1.5
+agent_max_climb = 0.25
+filter_baking_aabb = AABB(-41, -1, -41, 82, 6, 82)
+
+[sub_resource type="PlaneMesh" id="Mesh_terreno"]
+material = ExtResource("2_mat_terreno")
+size = Vector2(200, 200)
+
+[sub_resource type="BoxShape3D" id="Shape_terreno"]
+size = Vector3(200, 1, 200)
+
+[sub_resource type="BoxShape3D" id="Shape_limite_ns"]
+size = Vector3(82, 4, 1)
+
+[sub_resource type="BoxShape3D" id="Shape_limite_eo"]
+size = Vector3(1, 4, 82)
+
+[sub_resource type="StyleBoxFlat" id="BarraFondo"]
+bg_color = Color(0, 0, 0, 0.55)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="BarraRelleno"]
+bg_color = Color(0.35, 0.8, 0.3, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Entorno")
+
+[node name="Sol" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.4096, 0.2868, 0, 0.5736, 0.8192, -0.5, -0.7094, 0.4967, 0, 10, 0)
+shadow_enabled = true
+
+[node name="Camara" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 13, 11)
+current = true
+fov = 55.0
+
+[node name="Navegacion" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavMesh")
+
+[node name="Terreno" type="StaticBody3D" parent="Navegacion"]
+collision_mask = 0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Navegacion/Terreno"]
+mesh = SubResource("Mesh_terreno")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Navegacion/Terreno"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("Shape_terreno")
+
+[node name="Limites" type="StaticBody3D" parent="Navegacion"]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Norte" type="CollisionShape3D" parent="Navegacion/Limites"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -40.5)
+shape = SubResource("Shape_limite_ns")
+
+[node name="Sur" type="CollisionShape3D" parent="Navegacion/Limites"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 40.5)
+shape = SubResource("Shape_limite_ns")
+
+[node name="Este" type="CollisionShape3D" parent="Navegacion/Limites"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40.5, 2, 0)
+shape = SubResource("Shape_limite_eo")
+
+[node name="Oeste" type="CollisionShape3D" parent="Navegacion/Limites"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40.5, 2, 0)
+shape = SubResource("Shape_limite_eo")
+
+[node name="Arboles" type="Node3D" parent="Navegacion"]
+
+[node name="ArbolesDecorativos" type="Node3D" parent="."]
+
+[node name="Frutas" type="Node3D" parent="."]
+
+[node name="Animales" type="Node3D" parent="."]
+
+[node name="Pajaros" type="Node3D" parent="."]
+
+[node name="Jugador" parent="." instance=ExtResource("3_jugador")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+
+[node name="Marcador" parent="." instance=ExtResource("4_marcador")]
+
+[node name="Ambiente" type="AudioStreamPlayer" parent="."]
+
+[node name="TimerEcosistema" type="Timer" parent="."]
+wait_time = 3.0
+autostart = true
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="EtiquetaHambre" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 10.0
+offset_right = 316.0
+offset_bottom = 38.0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 20
+text = "Hambre"
+
+[node name="BarraHambre" type="ProgressBar" parent="HUD"]
+offset_left = 16.0
+offset_top = 40.0
+offset_right = 316.0
+offset_bottom = 64.0
+mouse_filter = 2
+theme_override_styles/background = SubResource("BarraFondo")
+theme_override_styles/fill = SubResource("BarraRelleno")
+value = 100.0
+show_percentage = false
+
+[node name="Contador" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 70.0
+offset_right = 316.0
+offset_bottom = 100.0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 22
+text = "Comida: 0 / 10"
+
+[node name="Aviso" type="Label" parent="HUD"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -250.0
+offset_top = 16.0
+offset_right = 250.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.32, 0.25, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 30
+text = "¡Un oso te persigue! (Shift: correr)"
+horizontal_alignment = 1
+
+[node name="Ayuda" type="Label" parent="HUD"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -40.0
+offset_right = 1000.0
+offset_bottom = -12.0
+grow_vertical = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="Comer" type="Label" parent="HUD"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -130.0
+offset_right = 150.0
+offset_bottom = -90.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 26
+text = "E: comer"
+horizontal_alignment = 1
+
+[node name="Mira" type="ColorRect" parent="HUD"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -3.0
+offset_top = -3.0
+offset_right = 3.0
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.7)
+
+[node name="Flecha" type="Node2D" parent="HUD"]
+
+[node name="Triangulo" type="Polygon2D" parent="HUD/Flecha"]
+color = Color(1, 0.25, 0.2, 0.9)
+polygon = PackedVector2Array(0, -26, 20, 14, 0, 6, -20, 14)
+
+[node name="PantallaFinal" type="CanvasLayer" parent="."]
+process_mode = 3
+layer = 2
+
+[node name="Fondo" type="ColorRect" parent="PantallaFinal"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Centro" type="CenterContainer" parent="PantallaFinal/Fondo"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Caja" type="VBoxContainer" parent="PantallaFinal/Fondo/Centro"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Titulo" type="Label" parent="PantallaFinal/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 56
+text = "¡Ganaste!"
+horizontal_alignment = 1
+
+[node name="Motivo" type="Label" parent="PantallaFinal/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Motivo"
+horizontal_alignment = 1
+
+[node name="BotonReintentar" type="Button" parent="PantallaFinal/Fondo/Centro/Caja"]
+custom_minimum_size = Vector2(220, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Reintentar"
+
+[node name="BotonMenu" type="Button" parent="PantallaFinal/Fondo/Centro/Caja"]
+custom_minimum_size = Vector2(220, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Menú"
+
+[node name="MenuInicio" type="CanvasLayer" parent="."]
+process_mode = 3
+layer = 3
+
+[node name="Fondo" type="ColorRect" parent="MenuInicio"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.08, 0.04, 0.55)
+
+[node name="Centro" type="CenterContainer" parent="MenuInicio/Fondo"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Caja" type="VBoxContainer" parent="MenuInicio/Fondo/Centro"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Titulo" type="Label" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 60
+text = "Bosque Hambriento"
+horizontal_alignment = 1
+
+[node name="Objetivo" type="Label" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Come 10 frutas sin morir de hambre ni ser devorado por un oso."
+horizontal_alignment = 1
+
+[node name="Espacio" type="Control" parent="MenuInicio/Fondo/Centro/Caja"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="BotonTercera" type="Button" parent="MenuInicio/Fondo/Centro/Caja"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
+text = "Tercera persona"
+
+[node name="AyudaTercera" type="Label" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/font_size = 15
+text = "Click derecho para moverte, la cámara te sigue desde arriba."
+horizontal_alignment = 1
+
+[node name="BotonPrimera" type="Button" parent="MenuInicio/Fondo/Centro/Caja"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
+text = "Primera persona"
+
+[node name="AyudaPrimera" type="Label" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/font_size = 15
+text = "WASD para caminar, Shift + W para correr, el mouse para mirar."
+horizontal_alignment = 1
+
+[node name="Sensibilidad" type="HBoxContainer" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 12
+
+[node name="Etiqueta" type="Label" parent="MenuInicio/Fondo/Centro/Caja/Sensibilidad"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Sensibilidad del mouse:"
+
+[node name="Deslizador" type="HSlider" parent="MenuInicio/Fondo/Centro/Caja/Sensibilidad"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_vertical = 4
+min_value = 1.0
+max_value = 10.0
+step = 0.5
+value = 5.0
+
+[node name="Valor" type="Label" parent="MenuInicio/Fondo/Centro/Caja/Sensibilidad"]
+custom_minimum_size = Vector2(36, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "5"
+
+[node name="MenuPausa" type="CanvasLayer" parent="."]
+process_mode = 3
+layer = 4
+script = ExtResource("5_menu_pausa")
+
+[node name="Fondo" type="ColorRect" parent="MenuPausa"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Centro" type="CenterContainer" parent="MenuPausa/Fondo"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Caja" type="VBoxContainer" parent="MenuPausa/Fondo/Centro"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Titulo" type="Label" parent="MenuPausa/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "Pausa"
+horizontal_alignment = 1
+
+[node name="BotonContinuar" type="Button" parent="MenuPausa/Fondo/Centro/Caja"]
+custom_minimum_size = Vector2(260, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Continuar"
+
+[node name="BotonMenu" type="Button" parent="MenuPausa/Fondo/Centro/Caja"]
+custom_minimum_size = Vector2(260, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Menú principal"
+
+[node name="BotonSalir" type="Button" parent="MenuPausa/Fondo/Centro/Caja"]
+custom_minimum_size = Vector2(260, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Salir del juego"
+
+[connection signal="hambre_cambio" from="Jugador" to="." method="_on_jugador_hambre_cambio"]
+[connection signal="comio" from="Jugador" to="." method="_on_jugador_comio"]
+[connection signal="llego_al_destino" from="Jugador" to="." method="_on_jugador_llego_al_destino"]
+[connection signal="murio" from="Jugador" to="." method="_on_jugador_murio"]
+[connection signal="timeout" from="TimerEcosistema" to="." method="_on_timer_ecosistema_timeout"]
+[connection signal="pressed" from="PantallaFinal/Fondo/Centro/Caja/BotonReintentar" to="." method="_on_boton_reintentar_pressed"]
+[connection signal="pressed" from="PantallaFinal/Fondo/Centro/Caja/BotonMenu" to="." method="_on_boton_menu_pressed"]
+[connection signal="pressed" from="MenuInicio/Fondo/Centro/Caja/BotonTercera" to="." method="_on_boton_tercera_pressed"]
+[connection signal="pressed" from="MenuInicio/Fondo/Centro/Caja/BotonPrimera" to="." method="_on_boton_primera_pressed"]
+[connection signal="value_changed" from="MenuInicio/Fondo/Centro/Caja/Sensibilidad/Deslizador" to="." method="_on_sensibilidad_value_changed"]
+[connection signal="reanudado" from="MenuPausa" to="." method="_on_menu_pausa_reanudado"]
+[connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonContinuar" to="MenuPausa" method="_on_boton_continuar_pressed"]
+[connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonMenu" to="MenuPausa" method="_on_boton_menu_pressed"]
+[connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonSalir" to="MenuPausa" method="_on_boton_salir_pressed"]

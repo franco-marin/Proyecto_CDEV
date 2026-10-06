@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/marcador.gd" id="1_script"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_marcador"]
+albedo_color = Color(1, 0.85, 0.2, 1)
+emission_enabled = true
+emission = Color(1, 0.75, 0.1, 1)
+
+[sub_resource type="TorusMesh" id="Mesh_anillo"]
+material = SubResource("Mat_marcador")
+inner_radius = 0.35
+outer_radius = 0.5
+
+[node name="Marcador" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Anillo" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_anillo")

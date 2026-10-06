@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/animales/carnivoro_grande.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/modelo_animal.gd" id="2_modelo"]
+
+[sub_resource type="CylinderShape3D" id="Forma"]
+height = 1.7
+radius = 0.8
+
+[node name="Oso" type="CharacterBody3D" groups=["carnivoros", "carnivoros_grandes"]]
+collision_layer = 8
+collision_mask = 3
+script = ExtResource("1_script")
+velocidad_caminar = 1.6
+velocidad_correr = 4.5
+radio_deambular = 14.0
+radio_ataque = 1.9
+hambre_minima = 30.0
+hambre_maxima = 60.0
+
+[node name="Colision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+shape = SubResource("Forma")
+
+[node name="Modelo" type="Node3D" parent="."]
+script = ExtResource("2_modelo")
+tamano = 1.6
+color_cuerpo = Color(0.3, 0.2, 0.13, 1)
+color_detalle = Color(0.17, 0.11, 0.07, 1)
+largo_cuerpo = 1.1
+ancho_cuerpo = 0.7
+alto_cuerpo = 0.6
+tamano_cabeza = 0.5
+hocico_largo = true
+
+[node name="Agente" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 0.5
+path_height_offset = 0.5

@@ -1,0 +1,344 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/jugador.gd" id="1_script"]
+[ext_resource type="StandardMaterial3D" path="res://recursos/material_animal.tres" id="2_mat"]
+
+[sub_resource type="CylinderShape3D" id="Forma"]
+height = 1.6
+radius = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_oscuro"]
+albedo_color = Color(0.08, 0.06, 0.05, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_hocico"]
+albedo_color = Color(0.93, 0.7, 0.6, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_cuerpo"]
+material = ExtResource("2_mat")
+size = Vector3(0.6, 0.5, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_cabeza"]
+material = ExtResource("2_mat")
+size = Vector3(0.45, 0.45, 0.45)
+
+[sub_resource type="BoxMesh" id="Mesh_hocico"]
+material = SubResource("Mat_hocico")
+size = Vector3(0.25, 0.18, 0.12)
+
+[sub_resource type="SphereMesh" id="Mesh_ojo"]
+material = SubResource("Mat_oscuro")
+radius = 0.05
+height = 0.1
+
+[sub_resource type="BoxMesh" id="Mesh_oreja"]
+material = SubResource("Mat_oscuro")
+size = Vector3(0.1, 0.16, 0.08)
+
+[sub_resource type="BoxMesh" id="Mesh_pata"]
+material = ExtResource("2_mat")
+size = Vector3(0.15, 0.4, 0.15)
+
+[sub_resource type="BoxMesh" id="Mesh_cola"]
+material = SubResource("Mat_oscuro")
+size = Vector3(0.08, 0.08, 0.35)
+
+[sub_resource type="BoxMesh" id="Mesh_hocico_fps"]
+material = SubResource("Mat_hocico")
+size = Vector3(0.34, 0.2, 0.3)
+
+[sub_resource type="BoxMesh" id="Mesh_fosa"]
+material = SubResource("Mat_oscuro")
+size = Vector3(0.05, 0.01, 0.04)
+
+[sub_resource type="Animation" id="Anim_caminar"]
+resource_name = "caminar"
+length = 0.5
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Modelo/PataDI:rotation:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.5, -0.5, 0.5]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Modelo/PataTD:rotation:x")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.5, -0.5, 0.5]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Modelo/PataDD:rotation:x")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.5, 0.5, -0.5]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Modelo/PataTI:rotation:x")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.5, 0.5, -0.5]
+}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Modelo/Cuerpo:position:y")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0, 0.125, 0.25, 0.375, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.6, 0.64, 0.6, 0.64, 0.6]
+}
+
+[sub_resource type="Animation" id="Anim_quieto"]
+resource_name = "quieto"
+length = 1.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Modelo/Cola:rotation:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.6, 1.2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.5, -0.5, 0.5]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Modelo/PataDI:rotation:x")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Modelo/PataDD:rotation:x")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Modelo/PataTI:rotation:x")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Modelo/PataTD:rotation:x")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Modelo/Cuerpo:position:y")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.6]
+}
+
+[sub_resource type="Animation" id="Anim_comer"]
+resource_name = "comer"
+length = 0.8
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Modelo/Cabeza:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.55, 0.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0.9, 0.6), Vector3(0, 0.55, 0.78), Vector3(0, 0.55, 0.78), Vector3(0, 0.9, 0.6)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Modelo/Cabeza:rotation:x")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.4, 0.55, 0.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.0, 0.6, 0.45, 0.6, 0.0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimLib"]
+_data = {
+&"caminar": SubResource("Anim_caminar"),
+&"comer": SubResource("Anim_comer"),
+&"quieto": SubResource("Anim_quieto")
+}
+
+[node name="Jugador" type="CharacterBody3D" groups=["jugador"]]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_script")
+
+[node name="Colision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("Forma")
+
+[node name="Modelo" type="Node3D" parent="."]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)
+
+[node name="Cuerpo" type="MeshInstance3D" parent="Modelo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("Mesh_cuerpo")
+
+[node name="Cabeza" type="MeshInstance3D" parent="Modelo"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0.6)
+mesh = SubResource("Mesh_cabeza")
+
+[node name="Hocico" type="MeshInstance3D" parent="Modelo/Cabeza"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.08, 0.27)
+mesh = SubResource("Mesh_hocico")
+
+[node name="OjoIzq" type="MeshInstance3D" parent="Modelo/Cabeza"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.08, 0.22)
+mesh = SubResource("Mesh_ojo")
+
+[node name="OjoDer" type="MeshInstance3D" parent="Modelo/Cabeza"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.08, 0.22)
+mesh = SubResource("Mesh_ojo")
+
+[node name="OrejaIzq" type="MeshInstance3D" parent="Modelo/Cabeza"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16, 0.29, -0.05)
+mesh = SubResource("Mesh_oreja")
+
+[node name="OrejaDer" type="MeshInstance3D" parent="Modelo/Cabeza"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16, 0.29, -0.05)
+mesh = SubResource("Mesh_oreja")
+
+[node name="Cola" type="Node3D" parent="Modelo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, -0.5)
+
+[node name="Mesh" type="MeshInstance3D" parent="Modelo/Cola"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.17)
+mesh = SubResource("Mesh_cola")
+
+[node name="PataDI" type="Node3D" parent="Modelo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.4, 0.45)
+
+[node name="Mesh" type="MeshInstance3D" parent="Modelo/PataDI"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+mesh = SubResource("Mesh_pata")
+
+[node name="PataDD" type="Node3D" parent="Modelo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.4, 0.45)
+
+[node name="Mesh" type="MeshInstance3D" parent="Modelo/PataDD"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+mesh = SubResource("Mesh_pata")
+
+[node name="PataTI" type="Node3D" parent="Modelo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.4, -0.42)
+
+[node name="Mesh" type="MeshInstance3D" parent="Modelo/PataTI"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+mesh = SubResource("Mesh_pata")
+
+[node name="PataTD" type="Node3D" parent="Modelo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.4, -0.42)
+
+[node name="Mesh" type="MeshInstance3D" parent="Modelo/PataTD"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+mesh = SubResource("Mesh_pata")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimLib")
+}
+
+[node name="Agente" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 0.5
+path_height_offset = 0.5
+
+[node name="Ojos" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
+
+[node name="Camara" type="Camera3D" parent="Ojos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.0)
+cull_mask = 1048573
+fov = 80.0
+near = 0.05
+
+[node name="HocicoPrimeraPersona" type="MeshInstance3D" parent="Ojos/Camara"]
+visible = false
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, -0.35)
+cast_shadow = 0
+mesh = SubResource("Mesh_hocico_fps")
+
+[node name="FosaIzq" type="MeshInstance3D" parent="Ojos/Camara/HocicoPrimeraPersona"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.07, 0.101, -0.11)
+cast_shadow = 0
+mesh = SubResource("Mesh_fosa")
+
+[node name="FosaDer" type="MeshInstance3D" parent="Ojos/Camara/HocicoPrimeraPersona"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.07, 0.101, -0.11)
+cast_shadow = 0
+mesh = SubResource("Mesh_fosa")
