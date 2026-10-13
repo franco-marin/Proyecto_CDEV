@@ -1,5 +1,5 @@
 extends AnimalIA
-## Carnívoro grande (oso): lento, caza animales pequeños y, si ve al jugador,
+## Cazador furtivo: recorre el bosque, caza animales pequeños y, si ve al jugador,
 ## lo prefiere antes que cualquier otra presa. Se rinde si el jugador se aleja lo suficiente.
 
 @export var vision_jugador := 15.0
@@ -25,7 +25,7 @@ func _pensar() -> void:
 	if estado == Estado.PERSEGUIR and continuar_persecucion(distancia_rendirse_caza, tiempo_maximo_caza):
 		return
 
-	# 4) Buscar presa pequeña si tiene hambre.
+	# 4) Buscar presa pequeña si quiere cazar.
 	if tiene_hambre():
 		var presa := buscar_mas_cercano("animales_pequenos", vision_caza)
 		if presa:
@@ -41,6 +41,6 @@ func persigue_al_jugador() -> bool:
 
 func _atrapar(presa) -> void:
 	if presa.is_in_group("jugador"):
-		presa.ser_devorado()
+		presa.ser_capturado()
 	else:
 		super(presa)

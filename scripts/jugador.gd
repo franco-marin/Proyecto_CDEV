@@ -141,8 +141,8 @@ func ir_a_comer(fruta: Node3D, correr := false) -> void:
 	_navegar(fruta.global_position, correr)
 
 
-func ser_devorado() -> void:
-	_morir("devorado")
+func ser_capturado() -> void:
+	_morir("capturado")
 
 
 func puede_ser_objetivo() -> bool:
