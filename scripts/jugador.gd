@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## El jugador: un herbívoro grande que camina, corre y come fruta para no morir de hambre.
+## El jugador: un yaguareté que camina, corre y come para no morir de hambre.
 
 signal hambre_cambio(valor: float, maximo: float)
 signal comio(total: int)
