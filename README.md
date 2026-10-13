@@ -1,7 +1,7 @@
 # Bosque Hambriento
 
 Juego 3D hecho con **Godot 4.7**. Sos un yaguareté en un bosque: comé 10 frutas
-sin morir de hambre y sin que te alcance un oso. Se puede jugar en tercera persona
+sin morir de hambre y sin que te atrape un cazador. Se puede jugar en tercera persona
 (click derecho para moverse) o en primera persona (WASD + mouse).
 
 ## Cómo abrirlo

@@ -1,15 +1,18 @@
 extends AnimalIA
 ## Herbívoro pequeño (conejo): come fruta, compite con el jugador por ella
-## y huye tanto del jugador como de cualquier carnívoro.
+## y huye del jugador, de cualquier carnívoro y de los cazadores.
 
 @export var distancia_miedo_jugador := 6.0
 @export var distancia_miedo_carnivoros := 9.0
+@export var distancia_miedo_cazadores := 12.0
 @export var vision_comida := 15.0
 
 
 func _pensar() -> void:
 	# 1) Lo más importante: sobrevivir.
-	var amenaza := buscar_mas_cercano("carnivoros", distancia_miedo_carnivoros)
+	var amenaza := buscar_mas_cercano("cazadores", distancia_miedo_cazadores)
+	if amenaza == null:
+		amenaza = buscar_mas_cercano("carnivoros", distancia_miedo_carnivoros)
 	if amenaza == null:
 		amenaza = buscar_mas_cercano("jugador", distancia_miedo_jugador)
 	if amenaza:

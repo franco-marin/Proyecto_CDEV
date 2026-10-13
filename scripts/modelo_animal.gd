@@ -3,7 +3,7 @@ class_name ModeloAnimal
 extends Node3D
 ## Construye por código un cuadrúpedo hecho de cajas y anima sus patas según la velocidad.
 ## Gracias a @tool también se ve en el editor y se rehace al cambiar cualquier propiedad
-## en el Inspector. Así un solo script sirve para conejos, zorros y osos.
+## en el Inspector. Así un solo script sirve para conejos y zorros.
 
 enum TipoOrejas { CORTAS, LARGAS, PUNTIAGUDAS }
 
