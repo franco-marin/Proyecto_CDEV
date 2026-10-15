@@ -4,6 +4,7 @@ extends Node3D
 ## se gana o se pierde.
 
 const ESCENA_ARBOL := preload("res://escenas/arbol.tscn")
+const ESCENA_ARBUSTO := preload("res://escenas/arbusto.tscn")
 const ESCENA_FRUTA := preload("res://escenas/fruta.tscn")
 const ESCENA_PAJARO := preload("res://escenas/pajaro.tscn")
 const ESCENA_CONEJO := preload("res://escenas/animales/conejo.tscn")
@@ -20,10 +21,21 @@ const FACTOR_SENSIBILIDAD := 0.0006
 const AYUDA_TERCERA := "Click derecho: caminar  ·  Shift + click derecho: correr  ·  Click sobre un arbusto: comer  ·  Rueda: zoom  ·  Esc: pausa"
 const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  ·  E: comer (cerca y mirando el arbusto)  ·  Esc: pausa"
 
-@export_group("Bosque")
-@export var cantidad_arboles := 55
-@export var cantidad_arboles_decorativos := 70
-@export var separacion_arboles := 3.5
+@export_group("Selva")
+## Árboles del dosel (palo rosa, timbó, lapacho): sus copas tapan el cielo.
+@export var cantidad_arboles_grandes := 62
+@export var cantidad_palmeras := 15
+@export var cantidad_helechos_arborescentes := 28
+## Plantas del sotobosque (tacuaras, helechos, caraguatás, arbustos): limitan la visión.
+@export var cantidad_sotobosque := 380
+@export var cantidad_arboles_decorativos := 45
+@export var cantidad_sotobosque_decorativo := 120
+
+@export_group("Recorte de la maleza")
+## Radio (en metros) alrededor del yaguareté donde el sotobosque no se dibuja.
+@export var radio_maleza := 2.6
+## En tercera persona: radio del círculo en pantalla (proporción del alto de la pantalla).
+@export var radio_circulo_pantalla := 0.2
 
 @export_group("Ecosistema")
 @export var cantidad_frutas := 12
@@ -33,7 +45,8 @@ const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  
 @export var cantidad_pajaros := 8
 
 @export_group("Cámara")
-@export var offset_camara := Vector3(0, 13, 11)
+## La cámara va por debajo del dosel (las copas empiezan a unos 10 m).
+@export var offset_camara := Vector3(0, 6.5, 8)
 @export var suavizado_camara := 4.0
 
 var listo := false  # el bosque y la navegación ya están creados
@@ -47,6 +60,7 @@ var zoom := 1.0
 @onready var navegacion: NavigationRegion3D = $Navegacion
 @onready var contenedor_arboles: Node3D = $Navegacion/Arboles
 @onready var contenedor_decorativos: Node3D = $ArbolesDecorativos
+@onready var contenedor_sotobosque: Node3D = $Sotobosque
 @onready var contenedor_frutas: Node3D = $Frutas
 @onready var contenedor_animales: Node3D = $Animales
 @onready var contenedor_pajaros: Node3D = $Pajaros
@@ -78,6 +92,8 @@ func _ready() -> void:
 	_actualizar_contador(0)
 	camara.global_position = jugador.global_position + offset_camara
 	camara.look_at(jugador.global_position)
+	RenderingServer.global_shader_parameter_set("maleza_radio", radio_maleza)
+	RenderingServer.global_shader_parameter_set("circulo_radio", 0.0)
 
 	# Menú de inicio: el juego queda en pausa hasta elegir un modo. Al "Reintentar"
 	# no se muestra y se usa el modo elegido la vez anterior (guardado en Mundo).
@@ -118,6 +134,7 @@ func _process(delta: float) -> void:
 		var objetivo := jugador.global_position + offset_camara * zoom
 		camara.global_position = camara.global_position.lerp(objetivo, suavizado_camara * delta)
 		camara.look_at(jugador.global_position + Vector3.UP)
+	_actualizar_recorte_maleza()
 
 	if jugando and listo:
 		tiempo_jugado += delta
@@ -134,9 +151,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Controles de tercera persona.
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom = clampf(zoom - 0.1, 0.5, 1.6)
+			zoom = clampf(zoom - 0.1, 0.5, 1.4)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom = clampf(zoom + 0.1, 0.5, 1.6)
+			zoom = clampf(zoom + 0.1, 0.5, 1.4)
 	if event.is_action_pressed("mover_animal"):
 		_ordenar_movimiento(Input.is_action_pressed("correr"))
 
@@ -218,31 +235,69 @@ func _fruta_cerca_de(punto: Vector3, radio: float) -> Node3D:
 
 # --- Creación del mundo ----------------------------------------------------------------
 
+## Genera la selva por estratos, como en la selva paranaense: primero los árboles
+## grandes del dosel, después el estrato medio (palmeras y helechos arborescentes) y
+## por último el sotobosque. Los troncos son obstáculos para la navegación; el
+## sotobosque no (el yaguareté lo atraviesa).
 func _generar_bosque() -> void:
-	# Árboles dentro del área jugable (son obstáculos para la navegación).
-	var posiciones: Array[Vector3] = []
-	var limite := Mundo.MITAD_MAPA - 2.0
-	for intento in 3000:
-		if posiciones.size() >= cantidad_arboles:
+	var E := FabricaFlora.Especie
+	var troncos: Array[Vector3] = []
+	var limite := Mundo.MITAD_MAPA - 1.5
+	_plantar(cantidad_arboles_grandes, [E.PALO_ROSA, E.PALO_ROSA, E.TIMBO, E.LAPACHO], 5.5, limite, troncos, contenedor_arboles)
+	_plantar(cantidad_palmeras, [E.PINDO], 3.0, limite, troncos, contenedor_arboles)
+	_plantar(cantidad_helechos_arborescentes, [E.CHACHI], 2.5, limite, troncos, contenedor_arboles)
+	var plantas_bajas := [E.ARBUSTO, E.ARBUSTO, E.ARBUSTO, E.HELECHO, E.HELECHO, E.HELECHO, E.CARAGUATA, E.CARAGUATA, E.TACUARA]
+	_plantar(cantidad_sotobosque, plantas_bajas, 1.0, limite, troncos, contenedor_sotobosque)
+
+	# Selva decorativa fuera de los límites, para que el bosque no "termine" de golpe.
+	var afuera: Array[Vector3] = []
+	_plantar(cantidad_arboles_decorativos, [E.PALO_ROSA, E.TIMBO, E.LAPACHO, E.PINDO], 6.0, 62.0, afuera, contenedor_decorativos, Mundo.MITAD_MAPA + 4.0)
+	_plantar(cantidad_sotobosque_decorativo, plantas_bajas, 1.5, 50.0, afuera, contenedor_sotobosque, Mundo.MITAD_MAPA + 3.0)
+
+
+## Planta "cantidad" plantas al azar entre "desde" y "limite" del centro, sin que queden a
+## menos de "separacion" metros de otras ya plantadas. El centro queda libre: ahí empieza el jugador.
+func _plantar(cantidad: int, especies: Array, separacion: float, limite: float,
+		ocupados: Array[Vector3], contenedor: Node3D, desde := 0.0) -> void:
+	var plantadas := 0
+	for intento in cantidad * 60:
+		if plantadas >= cantidad:
 			break
 		var punto := Vector3(randf_range(-limite, limite), 0, randf_range(-limite, limite))
-		if punto.length() < 6.0 or _muy_cerca(punto, posiciones):
-			continue  # el centro queda libre: ahí empieza el jugador
-		posiciones.append(punto)
-		var arbol := ESCENA_ARBOL.instantiate()
-		arbol.position = punto
-		contenedor_arboles.add_child(arbol)
-
-	# Árboles decorativos fuera de los límites, para que el bosque no "termine" de golpe.
-	var colocados := 0
-	while colocados < cantidad_arboles_decorativos:
-		var punto := Vector3(randf_range(-75, 75), 0, randf_range(-75, 75))
-		if maxf(absf(punto.x), absf(punto.z)) < Mundo.MITAD_MAPA + 5.0:
+		if punto.length() < 5.0 or maxf(absf(punto.x), absf(punto.z)) < desde:
 			continue
-		var arbol := ESCENA_ARBOL.instantiate()
-		arbol.position = punto
-		contenedor_decorativos.add_child(arbol)
-		colocados += 1
+		if _muy_cerca(punto, ocupados, separacion):
+			continue
+		var especie: FabricaFlora.Especie = especies.pick_random()
+		var sotobosque := FabricaFlora.es_sotobosque(especie)
+		if not sotobosque:
+			ocupados.append(punto)  # el sotobosque no ocupa lugar: puede crecer junto a otro
+		var planta := (ESCENA_ARBUSTO if sotobosque else ESCENA_ARBOL).instantiate()
+		planta.especie = especie
+		planta.variante = randi() % FabricaFlora.VARIANTES
+		planta.position = punto
+		planta.rotation.y = randf() * TAU
+		if sotobosque:
+			planta.scale = Vector3.ONE * randf_range(0.8, 1.3)
+			planta.set_instance_shader_parameter("tinte", Vector3.ONE * randf_range(0.8, 1.15))
+		else:
+			planta.get_node("Malla").set_instance_shader_parameter("tinte", Vector3.ONE * randf_range(0.85, 1.1))
+		contenedor.add_child(planta)
+		plantadas += 1
+
+
+## Le pasa al shader de la vegetación dónde está el jugador, para que recorte la maleza.
+func _actualizar_recorte_maleza() -> void:
+	RenderingServer.global_shader_parameter_set("jugador_posicion", jugador.global_position)
+	var camara_activa := get_viewport().get_camera_3d()
+	if primera_persona or camara_activa == null:
+		RenderingServer.global_shader_parameter_set("circulo_radio", 0.0)
+		return
+	var centro := jugador.global_position + Vector3.UP * 0.6
+	var pantalla := get_viewport().get_visible_rect().size
+	RenderingServer.global_shader_parameter_set("jugador_pantalla", camara_activa.unproject_position(centro) / pantalla)
+	RenderingServer.global_shader_parameter_set("jugador_distancia_camara", camara_activa.global_position.distance_to(centro))
+	RenderingServer.global_shader_parameter_set("circulo_radio", radio_circulo_pantalla)
 
 
 ## La navegación está lista cuando un punto lejano del centro ya tiene suelo caminable cerca.
@@ -254,9 +309,9 @@ func _navegacion_lista() -> bool:
 	return Mundo.distancia_horizontal(NavigationServer3D.map_get_closest_point(mapa, prueba), prueba) < 3.0
 
 
-func _muy_cerca(punto: Vector3, otros: Array[Vector3]) -> bool:
+func _muy_cerca(punto: Vector3, otros: Array[Vector3], separacion: float) -> bool:
 	for otro in otros:
-		if punto.distance_to(otro) < separacion_arboles:
+		if punto.distance_to(otro) < separacion:
 			return true
 	return false
 

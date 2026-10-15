@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/arbusto.gd" id="1_script"]
+
+[node name="Arbusto" type="MeshInstance3D"]
+cast_shadow = 0
+visibility_range_end = 55.0
+script = ExtResource("1_script")

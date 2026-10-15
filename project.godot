@@ -76,3 +76,26 @@ pausa={
 3d_physics/layer_3="jugador"
 3d_physics/layer_4="animales"
 3d_physics/layer_5="comida"
+
+[shader_globals]
+
+jugador_posicion={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+maleza_radio={
+"type": "float",
+"value": 2.6
+}
+jugador_pantalla={
+"type": "vec2",
+"value": Vector2(0.5, 0.5)
+}
+circulo_radio={
+"type": "float",
+"value": 0.0
+}
+jugador_distancia_camara={
+"type": "float",
+"value": 0.0
+}
