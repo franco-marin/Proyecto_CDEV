@@ -11,25 +11,27 @@ const ESCENA_CONEJO := preload("res://escenas/animales/conejo.tscn")
 const ESCENA_ZORRO := preload("res://escenas/animales/zorro.tscn")
 const ESCENA_CAZADOR := preload("res://escenas/animales/cazador.tscn")
 
-const FRUTAS_PARA_GANAR := 10
+const PRESAS_PARA_GANAR := 10
 const DISTANCIA_RAYO := 1000.0
-## Capas de física (Proyecto > Configuración > Nombres de Capas): 1 = terreno, 5 = comida.
-const MASCARA_CLICK := 1 | 16
+## Capa de física 1 (Proyecto > Configuración > Nombres de Capas): el terreno.
+const MASCARA_CLICK := 1
+## Si se hace click a menos de esta distancia de un animal, se lo elige como presa.
+const RADIO_CLICK_PRESA := 1.6
 ## Convierte la sensibilidad del menú (1 a 10) en radianes por píxel de mouse.
 const FACTOR_SENSIBILIDAD := 0.0006
 
-const AYUDA_TERCERA := "Click derecho: caminar  ·  Shift + click derecho: correr  ·  Click sobre un arbusto: comer  ·  Rueda: zoom  ·  Esc: pausa"
-const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  ·  E: comer (cerca y mirando el arbusto)  ·  Esc: pausa"
+const AYUDA_TERCERA := "Click derecho: caminar  ·  Click derecho sobre un animal: cazarlo y comerlo  ·  Shift: correr  ·  Rueda: zoom  ·  Esc: pausa"
+const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  ·  Click izquierdo: zarpazo  ·  E: comer una presa abatida  ·  Esc: pausa"
 
 @export_group("Selva")
 ## Árboles del dosel (palo rosa, timbó, lapacho): sus copas tapan el cielo.
-@export var cantidad_arboles_grandes := 62
-@export var cantidad_palmeras := 15
-@export var cantidad_helechos_arborescentes := 28
+@export var cantidad_arboles_grandes := 155
+@export var cantidad_palmeras := 38
+@export var cantidad_helechos_arborescentes := 70
 ## Plantas del sotobosque (tacuaras, helechos, caraguatás, arbustos): limitan la visión.
-@export var cantidad_sotobosque := 380
-@export var cantidad_arboles_decorativos := 45
-@export var cantidad_sotobosque_decorativo := 120
+@export var cantidad_sotobosque := 1400
+@export var cantidad_arboles_decorativos := 80
+@export var cantidad_sotobosque_decorativo := 220
 
 @export_group("Recorte de la maleza")
 ## Radio (en metros) alrededor del yaguareté donde el sotobosque no se dibuja.
@@ -38,11 +40,12 @@ const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  
 @export var radio_circulo_pantalla := 0.2
 
 @export_group("Ecosistema")
-@export var cantidad_frutas := 12
-@export var poblacion_conejos := 10
-@export var poblacion_zorros := 3
-@export var cantidad_cazadores := 3
-@export var cantidad_pajaros := 8
+## Frutas: alimento de los conejos (el yaguareté no las come).
+@export var cantidad_frutas := 28
+@export var poblacion_conejos := 24
+@export var poblacion_zorros := 7
+@export var cantidad_cazadores := 4
+@export var cantidad_pajaros := 14
 
 @export_group("Cámara")
 ## La cámara va por debajo del dosel (las copas empiezan a unos 10 m).
@@ -142,7 +145,8 @@ func _process(delta: float) -> void:
 		aviso.visible = cazador != null
 		_actualizar_flecha(cazador)
 		if primera_persona:
-			aviso_comer.visible = jugador.fruta_al_alcance() != null
+			aviso_comer.text = jugador.accion_disponible()
+			aviso_comer.visible = aviso_comer.text != ""
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -205,32 +209,36 @@ func _ordenar_movimiento(correr: bool) -> void:
 	var golpe := _raycast_desde_mouse()
 	if golpe.is_empty():
 		return
-	# ¿Se hizo click sobre una fruta (o muy cerca de una)?
-	var fruta = golpe.collider if golpe.collider.is_in_group("comida") else _fruta_cerca_de(golpe.position, 1.2)
-	if fruta:
-		jugador.ir_a_comer(fruta, correr)
-		marcador.mostrar_en(fruta.global_position)
+	# ¿Se hizo click sobre un animal (vivo o abatido)? Entonces es una presa.
+	var presa := _presa_cerca_de(golpe.position, RADIO_CLICK_PRESA)
+	if presa:
+		jugador.ir_a_cazar(presa, correr)
+		marcador.mostrar_en(presa.global_position)
 	else:
 		jugador.ir_a(golpe.position, correr)
 		marcador.mostrar_en(golpe.position)
 
 
-## Lanza un rayo desde la cámara pasando por el mouse. Choca con el terreno y con la fruta.
+## Lanza un rayo desde la cámara pasando por el mouse y devuelve dónde toca el terreno.
 func _raycast_desde_mouse() -> Dictionary:
 	var mouse := get_viewport().get_mouse_position()
 	var origen := camara.project_ray_origin(mouse)
 	var fin := origen + camara.project_ray_normal(mouse) * DISTANCIA_RAYO
 	var consulta := PhysicsRayQueryParameters3D.create(origen, fin, MASCARA_CLICK)
-	consulta.collide_with_areas = true  # las frutas son Area3D
 	return get_world_3d().direct_space_state.intersect_ray(consulta)
 
 
-func _fruta_cerca_de(punto: Vector3, radio: float) -> Node3D:
-	for nodo in get_tree().get_nodes_in_group("comida"):
-		var fruta := nodo as Node3D
-		if Mundo.distancia_horizontal(fruta.global_position, punto) <= radio:
-			return fruta
-	return null
+## La presa (viva o abatida) más cercana a un punto, dentro de un radio, o null.
+func _presa_cerca_de(punto: Vector3, radio: float) -> Node3D:
+	var mejor: Node3D = null
+	var mejor_distancia := radio
+	for nodo in get_tree().get_nodes_in_group("presas") + get_tree().get_nodes_in_group("presas_abatidas"):
+		var presa := nodo as Node3D
+		var distancia := Mundo.distancia_horizontal(presa.global_position, punto)
+		if distancia <= mejor_distancia:
+			mejor = presa
+			mejor_distancia = distancia
+	return mejor
 
 
 # --- Creación del mundo ----------------------------------------------------------------
@@ -251,8 +259,8 @@ func _generar_bosque() -> void:
 
 	# Selva decorativa fuera de los límites, para que el bosque no "termine" de golpe.
 	var afuera: Array[Vector3] = []
-	_plantar(cantidad_arboles_decorativos, [E.PALO_ROSA, E.TIMBO, E.LAPACHO, E.PINDO], 6.0, 62.0, afuera, contenedor_decorativos, Mundo.MITAD_MAPA + 4.0)
-	_plantar(cantidad_sotobosque_decorativo, plantas_bajas, 1.5, 50.0, afuera, contenedor_sotobosque, Mundo.MITAD_MAPA + 3.0)
+	_plantar(cantidad_arboles_decorativos, [E.PALO_ROSA, E.TIMBO, E.LAPACHO, E.PINDO], 6.0, 85.0, afuera, contenedor_decorativos, Mundo.MITAD_MAPA + 4.0)
+	_plantar(cantidad_sotobosque_decorativo, plantas_bajas, 1.5, 75.0, afuera, contenedor_sotobosque, Mundo.MITAD_MAPA + 3.0)
 
 
 ## Planta "cantidad" plantas al azar entre "desde" y "limite" del centro, sin que queden a
@@ -408,8 +416,8 @@ func _on_jugador_llego_al_destino() -> void:
 
 func _on_jugador_comio(total: int) -> void:
 	_actualizar_contador(total)
-	if total >= FRUTAS_PARA_GANAR:
-		_terminar(true, "Comiste %d frutas y sobreviviste al bosque." % total)
+	if total >= PRESAS_PARA_GANAR:
+		_terminar(true, "Cazaste y comiste %d presas: sobreviviste a la selva." % total)
 
 
 func _on_jugador_murio(motivo: String) -> void:
@@ -428,7 +436,7 @@ func _on_boton_menu_pressed() -> void:
 
 
 func _actualizar_contador(total: int) -> void:
-	contador.text = "Comida: %d / %d" % [total, FRUTAS_PARA_GANAR]
+	contador.text = "Presas: %d / %d" % [total, PRESAS_PARA_GANAR]
 
 
 func _terminar(gano: bool, texto: String) -> void:

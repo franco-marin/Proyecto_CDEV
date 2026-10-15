@@ -28,20 +28,20 @@ cell_size = 0.25
 agent_radius = 0.75
 agent_height = 1.5
 agent_max_climb = 0.25
-filter_baking_aabb = AABB(-41, -1, -41, 82, 6, 82)
+filter_baking_aabb = AABB(-63, -1, -63, 126, 6, 126)
 
 [sub_resource type="PlaneMesh" id="Mesh_terreno"]
 material = ExtResource("2_mat_terreno")
-size = Vector2(200, 200)
+size = Vector2(300, 300)
 
 [sub_resource type="BoxShape3D" id="Shape_terreno"]
-size = Vector3(200, 1, 200)
+size = Vector3(300, 1, 300)
 
 [sub_resource type="BoxShape3D" id="Shape_limite_ns"]
-size = Vector3(82, 4, 1)
+size = Vector3(126, 4, 1)
 
 [sub_resource type="BoxShape3D" id="Shape_limite_eo"]
-size = Vector3(1, 4, 82)
+size = Vector3(1, 4, 126)
 
 [sub_resource type="StyleBoxFlat" id="BarraFondo"]
 bg_color = Color(0, 0, 0, 0.55)
@@ -92,19 +92,19 @@ collision_layer = 2
 collision_mask = 0
 
 [node name="Norte" type="CollisionShape3D" parent="Navegacion/Limites"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -40.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -62.5)
 shape = SubResource("Shape_limite_ns")
 
 [node name="Sur" type="CollisionShape3D" parent="Navegacion/Limites"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 40.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 62.5)
 shape = SubResource("Shape_limite_ns")
 
 [node name="Este" type="CollisionShape3D" parent="Navegacion/Limites"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40.5, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 62.5, 2, 0)
 shape = SubResource("Shape_limite_eo")
 
 [node name="Oeste" type="CollisionShape3D" parent="Navegacion/Limites"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40.5, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.5, 2, 0)
 shape = SubResource("Shape_limite_eo")
 
 [node name="Arboles" type="Node3D" parent="Navegacion"]
@@ -161,7 +161,7 @@ offset_bottom = 100.0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 22
-text = "Comida: 0 / 10"
+text = "Presas: 0 / 10"
 
 [node name="Aviso" type="Label" parent="HUD"]
 anchors_preset = 5
@@ -317,7 +317,7 @@ horizontal_alignment = 1
 [node name="Objetivo" type="Label" parent="MenuInicio/Fondo/Centro/Caja"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "Come 10 frutas sin morir de hambre ni ser atrapado por un cazador."
+text = "Cazá y comé 10 presas sin morir de hambre ni ser atrapado por un cazador."
 horizontal_alignment = 1
 
 [node name="Espacio" type="Control" parent="MenuInicio/Fondo/Centro/Caja"]

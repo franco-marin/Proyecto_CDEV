@@ -1,6 +1,6 @@
 extends SceneTree
 ## Pipeline, paso 3: prueba de humo. Arranca el juego en cada modo de cámara,
-## simula unos segundos de partida (moverse, correr, comer) y comprueba que todo
+## simula unos segundos de partida (moverse, correr, cazar y comer) y comprueba que todo
 ## funcione. Termina con código 1 si algo falla.
 ## Uso: godot --headless --path . --fixed-fps 60 -s res://tests/ci/prueba_humo.gd
 
@@ -17,6 +17,7 @@ var frames := 0
 var t := -1  # frames desde que el mundo quedó listo
 var inicio := Vector3.ZERO
 var fallos: Array[String] = []
+var presa_de_prueba = null
 
 
 func _initialize() -> void:
@@ -73,9 +74,9 @@ func _verificar_mundo() -> void:
 func _guion_tercera_persona() -> void:
 	match t:
 		1:
-			jugador.ir_a_comer(_colocar_fruta(Vector3.RIGHT * 5.0), false)
+			jugador.ir_a_cazar(_colocar_presa(Vector3.RIGHT * 5.0), false)
 		300:
-			_comprobar(jugador.frutas_comidas >= 1, "click sobre un arbusto: el jugador va y lo come")
+			_comprobar(jugador.presas_comidas >= 1, "click derecho sobre un animal: el jugador lo caza y se lo come")
 			jugador.ir_a(mundo.punto_navegable(inicio + Vector3(-10, 0, 0)), true)
 		330:
 			_comprobar(jugador.esta_corriendo(), "Shift + click derecho: el jugador corre")
@@ -89,19 +90,24 @@ func _guion_primera_persona() -> void:
 	match t:
 		1:
 			_comprobar(jugador.camara_primera_persona.current, "la cámara de primera persona está activa")
-			_colocar_fruta(Vector3(sin(jugador._yaw), 0, cos(jugador._yaw)) * 1.6)
+			presa_de_prueba = _colocar_presa(Vector3(sin(jugador._yaw), 0, cos(jugador._yaw)) * 1.4)
 		10:
-			_evento_accion("comer", true)
+			_evento_accion("atacar", true)
 		11:
+			_evento_accion("atacar", false)
+		40:
+			_comprobar(presa_de_prueba != null and presa_de_prueba.abatido, "click izquierdo: el zarpazo abate a la presa")
+			_evento_accion("comer", true)
+		41:
 			_evento_accion("comer", false)
-		90:
-			_comprobar(jugador.frutas_comidas >= 1, "E: el jugador come la fruta que mira")
+		130:
+			_comprobar(jugador.presas_comidas >= 1, "E: el jugador se come la presa abatida")
 			Input.action_press("adelante")
-		250:
+		290:
 			Input.action_press("correr")
-		270:
+		310:
 			_comprobar(jugador.esta_corriendo(), "Shift + W: el jugador corre")
-		400:
+		440:
 			_comprobar(_distancia(jugador.global_position, inicio) > 5.0, "W: el jugador camina hacia adelante")
 			_comprobar(jugador.hambre < jugador.hambre_maxima, "la barra de hambre baja con el tiempo")
 			_siguiente_modo()
@@ -131,14 +137,14 @@ func _terminar() -> void:
 
 # --- Utilidades --------------------------------------------------------------
 
-## Mueve una fruta disponible a una posición relativa al jugador y la devuelve.
-func _colocar_fruta(desplazamiento: Vector3) -> Node3D:
-	for fruta in get_nodes_in_group("comida"):
-		if fruta.puede_ser_objetivo():
-			var posicion: Vector3 = mundo.punto_navegable(jugador.global_position + desplazamiento)
-			fruta.global_position = posicion
-			return fruta
-	_comprobar(false, "hay una fruta disponible para la prueba")
+## Pone un conejo en una posición relativa al jugador y lo devuelve. Se le apaga la
+## inteligencia para que no escape: la prueba revisa la caza, no la persecución.
+func _colocar_presa(desplazamiento: Vector3) -> Node3D:
+	for conejo in get_nodes_in_group("herbivoros_pequenos"):
+		conejo.set_physics_process(false)
+		conejo.global_position = mundo.punto_navegable(jugador.global_position + desplazamiento)
+		return conejo
+	_comprobar(false, "hay un conejo disponible para la prueba")
 	return null
 
 
