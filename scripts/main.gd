@@ -8,7 +8,7 @@ const ESCENA_FRUTA := preload("res://escenas/fruta.tscn")
 const ESCENA_PAJARO := preload("res://escenas/pajaro.tscn")
 const ESCENA_CONEJO := preload("res://escenas/animales/conejo.tscn")
 const ESCENA_ZORRO := preload("res://escenas/animales/zorro.tscn")
-const ESCENA_OSO := preload("res://escenas/animales/oso.tscn")
+const ESCENA_CAZADOR := preload("res://escenas/animales/cazador.tscn")
 
 const FRUTAS_PARA_GANAR := 10
 const DISTANCIA_RAYO := 1000.0
@@ -29,7 +29,7 @@ const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  
 @export var cantidad_frutas := 12
 @export var poblacion_conejos := 10
 @export var poblacion_zorros := 3
-@export var cantidad_osos := 3
+@export var cantidad_cazadores := 3
 @export var cantidad_pajaros := 8
 
 @export_group("Cámara")
@@ -105,8 +105,8 @@ func _ready() -> void:
 		_crear_animal(ESCENA_CONEJO, 10.0)
 	for i in poblacion_zorros:
 		_crear_animal(ESCENA_ZORRO, 15.0)
-	for i in cantidad_osos:
-		_crear_animal(ESCENA_OSO, 28.0)
+	for i in cantidad_cazadores:
+		_crear_animal(ESCENA_CAZADOR, 28.0)
 	for i in cantidad_pajaros:
 		_crear_pajaro()
 	listo = true
@@ -121,9 +121,9 @@ func _process(delta: float) -> void:
 
 	if jugando and listo:
 		tiempo_jugado += delta
-		var oso := _oso_que_persigue()
-		aviso.visible = oso != null
-		_actualizar_flecha(oso)
+		var cazador := _cazador_que_persigue()
+		aviso.visible = cazador != null
+		_actualizar_flecha(cazador)
 		if primera_persona:
 			aviso_comer.visible = jugador.fruta_al_alcance() != null
 
@@ -282,34 +282,34 @@ func _crear_pajaro() -> void:
 	pajaro.global_position = get_tree().get_nodes_in_group("arboles").pick_random().punto_posado()
 
 
-# --- Osos y flecha de aviso ----------------------------------------------------------
+# --- Cazadores y flecha de aviso -----------------------------------------------------
 
-## El oso más cercano que está persiguiendo al jugador, o null.
-func _oso_que_persigue() -> Node3D:
+## El cazador más cercano que está persiguiendo al jugador, o null.
+func _cazador_que_persigue() -> Node3D:
 	var mas_cercano: Node3D = null
-	for nodo in get_tree().get_nodes_in_group("carnivoros_grandes"):
-		var oso := nodo as Node3D
-		if not oso.call("persigue_al_jugador"):
+	for nodo in get_tree().get_nodes_in_group("cazadores"):
+		var cazador := nodo as Node3D
+		if not cazador.call("persigue_al_jugador"):
 			continue
-		if mas_cercano == null or oso.global_position.distance_to(jugador.global_position) \
+		if mas_cercano == null or cazador.global_position.distance_to(jugador.global_position) \
 				< mas_cercano.global_position.distance_to(jugador.global_position):
-			mas_cercano = oso
+			mas_cercano = cazador
 	return mas_cercano
 
 
-## Si el oso no está a la vista, una flecha en el borde de la pantalla indica de dónde viene.
-func _actualizar_flecha(oso: Node3D) -> void:
+## Si el cazador no está a la vista, una flecha en el borde de la pantalla indica de dónde viene.
+func _actualizar_flecha(cazador: Node3D) -> void:
 	var camara_activa := get_viewport().get_camera_3d()
-	if oso == null or camara_activa.is_position_in_frustum(oso.global_position + Vector3.UP):
+	if cazador == null or camara_activa.is_position_in_frustum(cazador.global_position + Vector3.UP):
 		flecha.visible = false
 		return
-	var hacia_oso := oso.global_position - jugador.global_position
+	var hacia_cazador := cazador.global_position - jugador.global_position
 	var frente := -camara_activa.global_transform.basis.z
 	var derecha := camara_activa.global_transform.basis.x
 	frente.y = 0.0
 	derecha.y = 0.0
-	# Ángulo del oso respecto de "adelante en la pantalla": 0 = arriba, positivo = a la derecha.
-	var angulo := atan2(hacia_oso.dot(derecha.normalized()), hacia_oso.dot(frente.normalized()))
+	# Ángulo del cazador respecto de "adelante en la pantalla": 0 = arriba, positivo = a la derecha.
+	var angulo := atan2(hacia_cazador.dot(derecha.normalized()), hacia_cazador.dot(frente.normalized()))
 	var centro := get_viewport().get_visible_rect().size / 2.0
 	flecha.position = centro + Vector2(sin(angulo) * centro.x, -cos(angulo) * centro.y) * 0.82
 	flecha.rotation = angulo
@@ -358,8 +358,8 @@ func _on_jugador_comio(total: int) -> void:
 
 
 func _on_jugador_murio(motivo: String) -> void:
-	if motivo == "devorado":
-		_terminar(false, "Un oso te alcanzó.")
+	if motivo == "capturado":
+		_terminar(false, "Un cazador te atrapó.")
 	else:
 		_terminar(false, "Te moriste de hambre.")
 

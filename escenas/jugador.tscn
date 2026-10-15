@@ -10,37 +10,59 @@ radius = 0.8
 [sub_resource type="StandardMaterial3D" id="Mat_oscuro"]
 albedo_color = Color(0.08, 0.06, 0.05, 1)
 
+[sub_resource type="StandardMaterial3D" id="Mat_mancha"]
+albedo_color = Color(0.13, 0.08, 0.04, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ojo"]
+albedo_color = Color(0.92, 0.7, 0.12, 1)
+
 [sub_resource type="StandardMaterial3D" id="Mat_hocico"]
-albedo_color = Color(0.93, 0.7, 0.6, 1)
+albedo_color = Color(0.95, 0.88, 0.72, 1)
 
 [sub_resource type="BoxMesh" id="Mesh_cuerpo"]
 material = ExtResource("2_mat")
-size = Vector3(0.6, 0.5, 1)
+size = Vector3(0.55, 0.5, 1.15)
 
 [sub_resource type="BoxMesh" id="Mesh_cabeza"]
 material = ExtResource("2_mat")
-size = Vector3(0.45, 0.45, 0.45)
+size = Vector3(0.5, 0.42, 0.42)
 
 [sub_resource type="BoxMesh" id="Mesh_hocico"]
 material = SubResource("Mat_hocico")
-size = Vector3(0.25, 0.18, 0.12)
+size = Vector3(0.26, 0.17, 0.12)
 
 [sub_resource type="SphereMesh" id="Mesh_ojo"]
-material = SubResource("Mat_oscuro")
-radius = 0.05
-height = 0.1
+material = SubResource("Mat_ojo")
+radius = 0.04
+height = 0.08
 
 [sub_resource type="BoxMesh" id="Mesh_oreja"]
-material = SubResource("Mat_oscuro")
-size = Vector3(0.1, 0.16, 0.08)
+material = ExtResource("2_mat")
+size = Vector3(0.13, 0.13, 0.06)
 
 [sub_resource type="BoxMesh" id="Mesh_pata"]
 material = ExtResource("2_mat")
-size = Vector3(0.15, 0.4, 0.15)
+size = Vector3(0.2, 0.35, 0.2)
 
 [sub_resource type="BoxMesh" id="Mesh_cola"]
-material = SubResource("Mat_oscuro")
-size = Vector3(0.08, 0.08, 0.35)
+material = ExtResource("2_mat")
+size = Vector3(0.13, 0.13, 0.8)
+
+[sub_resource type="BoxMesh" id="Mesh_mancha_arriba"]
+material = SubResource("Mat_mancha")
+size = Vector3(0.14, 0.03, 0.14)
+
+[sub_resource type="BoxMesh" id="Mesh_mancha_lado"]
+material = SubResource("Mat_mancha")
+size = Vector3(0.03, 0.14, 0.14)
+
+[sub_resource type="BoxMesh" id="Mesh_mancha_cabeza"]
+material = SubResource("Mat_mancha")
+size = Vector3(0.09, 0.03, 0.09)
+
+[sub_resource type="BoxMesh" id="Mesh_anillo_cola"]
+material = SubResource("Mat_mancha")
+size = Vector3(0.14, 0.14, 0.1)
 
 [sub_resource type="BoxMesh" id="Mesh_hocico_fps"]
 material = SubResource("Mat_hocico")
@@ -243,6 +265,62 @@ transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
 mesh = SubResource("Mesh_cuerpo")
 
+[node name="ManchaArriba0" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.25, 0.35)
+mesh = SubResource("Mesh_mancha_arriba")
+
+[node name="ManchaArriba1" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.25, 0.2)
+mesh = SubResource("Mesh_mancha_arriba")
+
+[node name="ManchaArriba2" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 0.25, 0.0)
+mesh = SubResource("Mesh_mancha_arriba")
+
+[node name="ManchaArriba3" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.25, -0.15)
+mesh = SubResource("Mesh_mancha_arriba")
+
+[node name="ManchaArriba4" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.25, -0.3)
+mesh = SubResource("Mesh_mancha_arriba")
+
+[node name="ManchaArriba5" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.25, -0.42)
+mesh = SubResource("Mesh_mancha_arriba")
+
+[node name="ManchaLadoIzq0" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.275, 0.05, 0.35)
+mesh = SubResource("Mesh_mancha_lado")
+
+[node name="ManchaLadoDer0" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.275, 0.05, 0.3)
+mesh = SubResource("Mesh_mancha_lado")
+
+[node name="ManchaLadoIzq1" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.275, -0.07, 0.1)
+mesh = SubResource("Mesh_mancha_lado")
+
+[node name="ManchaLadoDer1" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.275, -0.07, 0.05)
+mesh = SubResource("Mesh_mancha_lado")
+
+[node name="ManchaLadoIzq2" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.275, 0.08, -0.15)
+mesh = SubResource("Mesh_mancha_lado")
+
+[node name="ManchaLadoDer2" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.275, 0.08, -0.2)
+mesh = SubResource("Mesh_mancha_lado")
+
+[node name="ManchaLadoIzq3" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.275, -0.02, -0.4)
+mesh = SubResource("Mesh_mancha_lado")
+
+[node name="ManchaLadoDer3" type="MeshInstance3D" parent="Modelo/Cuerpo"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.275, -0.02, -0.45)
+mesh = SubResource("Mesh_mancha_lado")
+
 [node name="Cabeza" type="MeshInstance3D" parent="Modelo"]
 layers = 2
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0.6)
@@ -250,62 +328,84 @@ mesh = SubResource("Mesh_cabeza")
 
 [node name="Hocico" type="MeshInstance3D" parent="Modelo/Cabeza"]
 layers = 2
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.08, 0.27)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.07, 0.27)
 mesh = SubResource("Mesh_hocico")
 
 [node name="OjoIzq" type="MeshInstance3D" parent="Modelo/Cabeza"]
 layers = 2
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.08, 0.22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.07, 0.21)
 mesh = SubResource("Mesh_ojo")
 
 [node name="OjoDer" type="MeshInstance3D" parent="Modelo/Cabeza"]
 layers = 2
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.08, 0.22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13, 0.07, 0.21)
 mesh = SubResource("Mesh_ojo")
 
 [node name="OrejaIzq" type="MeshInstance3D" parent="Modelo/Cabeza"]
 layers = 2
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16, 0.29, -0.05)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, 0.25, -0.05)
 mesh = SubResource("Mesh_oreja")
 
 [node name="OrejaDer" type="MeshInstance3D" parent="Modelo/Cabeza"]
 layers = 2
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16, 0.29, -0.05)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.18, 0.25, -0.05)
 mesh = SubResource("Mesh_oreja")
 
+[node name="ManchaCabeza0" type="MeshInstance3D" parent="Modelo/Cabeza"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 0.21, -0.05)
+mesh = SubResource("Mesh_mancha_cabeza")
+
+[node name="ManchaCabeza1" type="MeshInstance3D" parent="Modelo/Cabeza"]
+layers = 2
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.21, 0.02)
+mesh = SubResource("Mesh_mancha_cabeza")
+
 [node name="Cola" type="Node3D" parent="Modelo"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, -0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.78, -0.55)
 
 [node name="Mesh" type="MeshInstance3D" parent="Modelo/Cola"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.17)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4)
 mesh = SubResource("Mesh_cola")
 
+[node name="Anillo0" type="MeshInstance3D" parent="Modelo/Cola"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.25)
+mesh = SubResource("Mesh_anillo_cola")
+
+[node name="Anillo1" type="MeshInstance3D" parent="Modelo/Cola"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+mesh = SubResource("Mesh_anillo_cola")
+
+[node name="Anillo2" type="MeshInstance3D" parent="Modelo/Cola"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.72)
+mesh = SubResource("Mesh_anillo_cola")
+
 [node name="PataDI" type="Node3D" parent="Modelo"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.4, 0.45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.35, 0.45)
 
 [node name="Mesh" type="MeshInstance3D" parent="Modelo/PataDI"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.175, 0)
 mesh = SubResource("Mesh_pata")
 
 [node name="PataDD" type="Node3D" parent="Modelo"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.4, 0.45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.35, 0.45)
 
 [node name="Mesh" type="MeshInstance3D" parent="Modelo/PataDD"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.175, 0)
 mesh = SubResource("Mesh_pata")
 
 [node name="PataTI" type="Node3D" parent="Modelo"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.4, -0.42)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.35, -0.42)
 
 [node name="Mesh" type="MeshInstance3D" parent="Modelo/PataTI"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.175, 0)
 mesh = SubResource("Mesh_pata")
 
 [node name="PataTD" type="Node3D" parent="Modelo"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.4, -0.42)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.35, -0.42)
 
 [node name="Mesh" type="MeshInstance3D" parent="Modelo/PataTD"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.175, 0)
 mesh = SubResource("Mesh_pata")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

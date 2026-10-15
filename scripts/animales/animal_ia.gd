@@ -32,7 +32,8 @@ var _reloj_pensar := 0.0
 var _gravedad: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 @onready var agente: NavigationAgent3D = $Agente
-@onready var modelo: ModeloAnimal = $Modelo
+## Sin tipo a propósito: puede ser un ModeloAnimal o un ModeloHumano (ambos tienen "velocidad").
+@onready var modelo = $Modelo
 
 
 func _ready() -> void:
