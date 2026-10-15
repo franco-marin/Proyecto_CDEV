@@ -67,17 +67,22 @@ func _verificar_mundo() -> void:
 	_comprobar(get_nodes_in_group("comida").size() > 0, "hay frutas")
 	_comprobar(get_nodes_in_group("herbivoros_pequenos").size() > 0, "hay conejos")
 	_comprobar(get_nodes_in_group("carnivoros_pequenos").size() > 0, "hay zorros")
-	_comprobar(get_nodes_in_group("carnivoros_grandes").size() > 0, "hay osos")
+	_comprobar(_depredadores_grandes().size() > 0, "hay depredadores grandes (osos o cazadores)")
 	_comprobar(main.get_node("Pajaros").get_child_count() > 0, "hay pájaros")
-	var oso_cerca := false
-	for oso in get_nodes_in_group("carnivoros_grandes"):
-		if _distancia(oso.global_position, jugador.global_position) < 20.0:
-			oso_cerca = true
-	_comprobar(not oso_cerca, "ningún oso aparece encima del jugador")
-	# Esta prueba revisa los controles: los osos no ven al jugador para que el
-	# resultado no dependa del azar (que uno se cruce en el camino).
-	for oso in get_nodes_in_group("carnivoros_grandes"):
-		oso.vision_jugador = 0.0
+	var depredador_cerca := false
+	for depredador in _depredadores_grandes():
+		if _distancia(depredador.global_position, jugador.global_position) < 20.0:
+			depredador_cerca = true
+	_comprobar(not depredador_cerca, "ningún depredador grande aparece encima del jugador")
+	# Esta prueba revisa los controles: los depredadores no ven al jugador para que
+	# el resultado no dependa del azar (que uno se cruce en el camino).
+	for depredador in _depredadores_grandes():
+		depredador.vision_jugador = 0.0
+
+
+## Los que pueden comerse al jugador. Según la versión del juego son osos o cazadores.
+func _depredadores_grandes() -> Array:
+	return get_nodes_in_group("carnivoros_grandes") + get_nodes_in_group("cazadores")
 
 
 func _guion_tercera_persona() -> void:
