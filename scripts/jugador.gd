@@ -17,7 +17,7 @@ signal murio(motivo: String)
 ## Cuánto más rápido baja el hambre al correr.
 @export var gasto_al_correr := 3.0
 @export var recuperacion_por_fruta := 35.0
-@export var distancia_para_comer := 1.8
+@export var distancia_para_comer := 1.6
 
 @export_group("Primera persona")
 ## Radianes que gira la cámara por cada píxel que se mueve el mouse.
