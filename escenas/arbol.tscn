@@ -8,5 +8,6 @@ collision_mask = 0
 script = ExtResource("1_script")
 
 [node name="Malla" type="MeshInstance3D" parent="."]
+visibility_range_end = 110.0
 
 [node name="Colision" type="CollisionShape3D" parent="."]

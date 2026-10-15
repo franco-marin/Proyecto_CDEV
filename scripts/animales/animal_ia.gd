@@ -17,12 +17,23 @@ const INTERVALO_PENSAR := 0.25
 @export var hambre_minima := 15.0
 @export var hambre_maxima := 35.0
 
+@export_group("Como presa del yaguareté")
+## Cuántos zarpazos aguanta antes de caer.
+@export var vida := 1
+## Cuánta hambre le quita al yaguareté comérselo.
+@export var valor_alimenticio := 30.0
+
+## Segundos que queda en el suelo después de caer, si nadie se lo come.
+const SEGUNDOS_ABATIDO := 60.0
+
 var estado: Estado = Estado.DEAMBULAR
 ## Lo que está persiguiendo, de lo que huye o la fruta a la que va. Sin tipo a propósito:
 ## puede ser una fruta, otro animal o el jugador.
 var objetivo = null
 var tiempo_en_estado := 0.0
 var vivo := true
+## Cayó por los zarpazos del yaguareté y está en el suelo, listo para ser comido.
+var abatido := false
 
 var _velocidad_actual := 0.0
 var _moviendose := false
@@ -145,17 +156,79 @@ func _atrapar(presa) -> void:
 	saciar()
 
 
+## Muere atrapado por otro animal (zorro o cazador): desaparece enseguida.
 func morir() -> void:
 	if not vivo:
 		return
 	vivo = false
-	# Salir de los grupos para que nadie más lo elija como presa.
+	_salir_de_los_grupos()
+	$Colision.set_deferred("disabled", true)
+	_desaparecer(0.4)
+
+
+## Recibe un zarpazo del yaguareté. Si le quedan fuerzas, escapa corriendo.
+func recibir_golpe(atacante: Node3D) -> void:
+	if not vivo:
+		return
+	vida -= 1
+	# Pequeño sacudón para que se note el golpe.
+	var escala: Vector3 = modelo.scale
+	var tween := create_tween()
+	tween.tween_property(modelo, "scale", escala * 1.25, 0.06)
+	tween.tween_property(modelo, "scale", escala, 0.1)
+	if vida <= 0:
+		_abatir()
+	else:
+		_moviendose = false
+		huir_de(atacante)
+
+
+## El yaguareté se lo come: devuelve cuánto alimenta (0 si ya no está disponible).
+func ser_comido() -> float:
+	if not abatido:
+		return 0.0
+	abatido = false
+	remove_from_group("presas_abatidas")
+	_desaparecer(0.8)
+	return valor_alimenticio
+
+
+## Cae al suelo, de costado. Queda ahí para que el yaguareté se lo coma.
+func _abatir() -> void:
+	vivo = false
+	abatido = true
+	_salir_de_los_grupos()
+	add_to_group("presas_abatidas")
+	$Colision.set_deferred("disabled", true)
+	velocity = Vector3.ZERO
+	modelo.velocidad = 0.0
+	modelo.set_process(false)  # deja de mover las patas y la cola
+	var tween := create_tween().set_parallel()
+	tween.tween_property(modelo, "rotation:z", PI / 2.0, 0.35)
+	tween.tween_property(modelo, "position:y", 0.12, 0.35)
+	# Si nadie se lo come, después de un rato desaparece.
+	var espera := create_tween()
+	espera.tween_interval(SEGUNDOS_ABATIDO)
+	espera.tween_callback(_vencer_abatido)
+
+
+func _vencer_abatido() -> void:
+	if abatido:
+		abatido = false
+		remove_from_group("presas_abatidas")
+		_desaparecer(1.0)
+
+
+## Salir de los grupos para que nadie más lo elija como presa.
+func _salir_de_los_grupos() -> void:
 	for grupo in get_groups():
 		if not String(grupo).begins_with("_"):
 			remove_from_group(grupo)
-	$Colision.set_deferred("disabled", true)
+
+
+func _desaparecer(segundos: float) -> void:
 	var tween := create_tween()
-	tween.tween_property(modelo, "scale", Vector3.ONE * 0.01, 0.4)
+	tween.tween_property(modelo, "scale", Vector3.ONE * 0.01, segundos)
 	tween.tween_callback(queue_free)
 
 

@@ -6,7 +6,7 @@ extends Node
 enum ModoCamara { TERCERA_PERSONA, PRIMERA_PERSONA }
 
 ## Mitad del lado del área jugable: el bosque mide 2 × MITAD_MAPA metros de lado.
-const MITAD_MAPA := 38.0
+const MITAD_MAPA := 60.0
 
 # Un autoload no se destruye al recargar la escena, así que aquí se guardan las
 # opciones que deben sobrevivir a "Reintentar".
