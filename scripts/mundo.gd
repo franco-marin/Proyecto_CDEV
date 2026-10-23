@@ -7,6 +7,8 @@ enum ModoCamara { TERCERA_PERSONA, PRIMERA_PERSONA }
 
 ## Mitad del lado del área jugable: el bosque mide 2 × MITAD_MAPA metros de lado.
 const MITAD_MAPA := 60.0
+## Tamaño de las celdas de la grilla que guarda dónde hay maleza (para la cobertura).
+const TAMANO_CELDA := 4.0
 
 # Un autoload no se destruye al recargar la escena, así que aquí se guardan las
 # opciones que deben sobrevivir a "Reintentar".
@@ -14,15 +16,73 @@ var modo := ModoCamara.TERCERA_PERSONA
 var mostrar_menu := true
 ## Sensibilidad del mouse en primera persona, de 1 a 10 (la elige el menú de inicio).
 var sensibilidad := 5.0
+## Nivel que se está jugando (1 a Niveles.CANTIDAD) y el más alto que se desbloqueó.
+var nivel := 1
+var nivel_desbloqueado := 1
+
+## El río del nivel actual (lo crea main.gd). Es null mientras no exista.
+var rio: Rio = null
+
+## Grilla con las posiciones de las plantas del sotobosque, para saber rápido si hay
+## maleza cerca de un punto sin recorrer las más de mil plantas.
+var _cobertura := {}
 
 
 ## Recarga el nivel. Con volver_al_menu = true se vuelve a elegir el modo de juego.
 func reiniciar(volver_al_menu: bool) -> void:
 	mostrar_menu = volver_al_menu
+	rio = null
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().reload_current_scene()
 
+
+## Pasa al nivel siguiente (y lo deja desbloqueado en el menú).
+func avanzar_nivel() -> void:
+	nivel = mini(nivel + 1, Niveles.CANTIDAD)
+	nivel_desbloqueado = maxi(nivel_desbloqueado, nivel)
+
+
+# --- Río ---------------------------------------------------------------------------
+
+func en_agua(punto: Vector3, margen := 0.0) -> bool:
+	return rio != null and rio.en_agua(punto, margen)
+
+
+## true si los dos puntos están del mismo lado del río (o si no hay río).
+func mismo_lado_del_rio(a: Vector3, b: Vector3) -> bool:
+	return rio == null or rio.lado(a) == rio.lado(b)
+
+
+# --- Cobertura (maleza) ------------------------------------------------------------
+
+func limpiar_cobertura() -> void:
+	_cobertura.clear()
+
+
+func registrar_cobertura(punto: Vector3) -> void:
+	var celda := _celda(punto)
+	if not _cobertura.has(celda):
+		_cobertura[celda] = []
+	_cobertura[celda].append(punto)
+
+
+## true si hay alguna planta del sotobosque a menos de "radio" metros del punto.
+func hay_cobertura(punto: Vector3, radio: float) -> bool:
+	var centro := _celda(punto)
+	for dx in [-1, 0, 1]:
+		for dz in [-1, 0, 1]:
+			for planta in _cobertura.get(centro + Vector2i(dx, dz), []):
+				if distancia_horizontal(planta, punto) <= radio:
+					return true
+	return false
+
+
+func _celda(punto: Vector3) -> Vector2i:
+	return Vector2i(floori(punto.x / TAMANO_CELDA), floori(punto.z / TAMANO_CELDA))
+
+
+# --- Puntos del mapa ---------------------------------------------------------------
 
 ## Recorta un punto para que quede dentro del área jugable.
 func limitar(punto: Vector3) -> Vector3:
@@ -46,9 +106,15 @@ func punto_aleatorio_cerca(origen: Vector3, radio: float) -> Vector3:
 	return punto_navegable(origen + Vector3(cos(angulo), 0, sin(angulo)) * distancia)
 
 
+## Punto al azar en tierra firme (fuera del río).
 func punto_aleatorio_en_mapa() -> Vector3:
-	return punto_navegable(Vector3(
-		randf_range(-MITAD_MAPA, MITAD_MAPA), 0, randf_range(-MITAD_MAPA, MITAD_MAPA)))
+	var punto := Vector3.ZERO
+	for intento in 20:
+		punto = punto_navegable(Vector3(
+			randf_range(-MITAD_MAPA, MITAD_MAPA), 0, randf_range(-MITAD_MAPA, MITAD_MAPA)))
+		if not en_agua(punto, 1.0):
+			break
+	return punto
 
 
 ## Punto al azar que esté al menos a "distancia_minima" de "centro".

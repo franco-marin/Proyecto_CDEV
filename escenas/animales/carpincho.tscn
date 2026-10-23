@@ -1,24 +1,28 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/animales/carnivoro_pequeno.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/animales/herbivoro.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/modelo_animal.gd" id="2_modelo"]
 
 [sub_resource type="CylinderShape3D" id="Forma"]
 height = 0.7
-radius = 0.4
+radius = 0.45
 
-[node name="Zorro" type="CharacterBody3D" groups=["carnivoros", "carnivoros_pequenos", "animales_pequenos", "presas"]]
+[node name="Carpincho" type="CharacterBody3D" groups=["carpinchos", "herbivoros", "presas"]]
 collision_layer = 8
 collision_mask = 3
 script = ExtResource("1_script")
-velocidad_caminar = 2.2
-velocidad_correr = 6.0
-radio_deambular = 12.0
-radio_ataque = 0.9
-hambre_minima = 25.0
-hambre_maxima = 45.0
+velocidad_caminar = 1.5
+velocidad_correr = 5.0
+radio_deambular = 8.0
+radio_ataque = 1.0
 vida = 2
 valor_alimenticio = 45.0
+puede_nadar = true
+multiplicador_en_agua = 0.9
+profundidad_nado = 0.3
+distancia_miedo_jugador = 7.0
+distancia_miedo_carnivoros = 3.0
+vive_cerca_del_rio = true
 
 [node name="Colision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
@@ -26,16 +30,14 @@ shape = SubResource("Forma")
 
 [node name="Modelo" type="Node3D" parent="."]
 script = ExtResource("2_modelo")
-tamano = 0.6
-color_cuerpo = Color(0.85, 0.42, 0.15, 1)
-color_detalle = Color(0.96, 0.93, 0.88, 1)
+tamano = 0.8
+color_cuerpo = Color(0.5, 0.35, 0.22, 1)
+color_detalle = Color(0.32, 0.22, 0.14, 1)
 largo_cuerpo = 1.1
-ancho_cuerpo = 0.5
-alto_cuerpo = 0.45
-tamano_cabeza = 0.42
-orejas = 2
-hocico_largo = true
-cola_larga = true
+alto_cuerpo = 0.55
+largo_patas = 0.25
+altura_cabeza = 0.2
+cola = 4
 
 [node name="Agente" type="NavigationAgent3D" parent="."]
 path_desired_distance = 0.5

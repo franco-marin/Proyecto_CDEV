@@ -1,34 +1,43 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/animales/herbivoro_pequeno.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/animales/herbivoro.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/modelo_animal.gd" id="2_modelo"]
 
 [sub_resource type="CylinderShape3D" id="Forma"]
-height = 0.55
-radius = 0.3
+height = 0.6
+radius = 0.35
 
-[node name="Conejo" type="CharacterBody3D" groups=["herbivoros_pequenos", "animales_pequenos", "presas"]]
+[node name="Pecari" type="CharacterBody3D" groups=["pecaries", "herbivoros", "presas"]]
 collision_layer = 8
 collision_mask = 3
 script = ExtResource("1_script")
-velocidad_caminar = 1.8
+velocidad_caminar = 2.0
 velocidad_correr = 5.5
 radio_deambular = 8.0
 radio_ataque = 0.9
+vida = 2
+valor_alimenticio = 40.0
+distancia_miedo_jugador = 7.0
+distancia_miedo_carnivoros = 4.0
+en_manada = true
 
 [node name="Colision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.275, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
 shape = SubResource("Forma")
 
 [node name="Modelo" type="Node3D" parent="."]
 script = ExtResource("2_modelo")
-tamano = 0.45
-color_cuerpo = Color(0.72, 0.68, 0.62, 1)
-color_detalle = Color(0.97, 0.97, 0.97, 1)
-largo_cuerpo = 0.9
-ancho_cuerpo = 0.55
+tamano = 0.6
+color_cuerpo = Color(0.25, 0.23, 0.21, 1)
+color_detalle = Color(0.75, 0.72, 0.66, 1)
+largo_cuerpo = 1.0
+ancho_cuerpo = 0.45
+alto_cuerpo = 0.5
 largo_patas = 0.3
-orejas = 1
+altura_cabeza = 0.1
+hocico = 1
+orejas = 2
+collar = true
 
 [node name="Agente" type="NavigationAgent3D" parent="."]
 path_desired_distance = 0.5

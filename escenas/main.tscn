@@ -57,6 +57,8 @@ corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 
+[sub_resource type="ButtonGroup" id="GrupoNiveles"]
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_script")
 
@@ -119,6 +121,8 @@ shape = SubResource("Shape_limite_eo")
 
 [node name="Pajaros" type="Node3D" parent="."]
 
+[node name="Objetos" type="Node3D" parent="."]
+
 [node name="Jugador" parent="." instance=ExtResource("3_jugador")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 
@@ -161,7 +165,28 @@ offset_bottom = 100.0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 22
-text = "Presas: 0 / 10"
+text = "Presas: 0 / 3"
+
+[node name="Nivel" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 100.0
+offset_right = 416.0
+offset_bottom = 124.0
+theme_override_colors/font_color = Color(0.85, 0.95, 0.8, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "Nivel 1"
+
+[node name="Estado" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 128.0
+offset_right = 516.0
+offset_bottom = 240.0
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
 
 [node name="Aviso" type="Label" parent="HUD"]
 anchors_preset = 5
@@ -268,6 +293,14 @@ theme_override_font_sizes/font_size = 22
 text = "Motivo"
 horizontal_alignment = 1
 
+[node name="BotonSiguiente" type="Button" parent="PantallaFinal/Fondo/Centro/Caja"]
+visible = false
+custom_minimum_size = Vector2(220, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Siguiente nivel"
+
 [node name="BotonReintentar" type="Button" parent="PantallaFinal/Fondo/Centro/Caja"]
 custom_minimum_size = Vector2(220, 50)
 layout_mode = 2
@@ -317,8 +350,44 @@ horizontal_alignment = 1
 [node name="Objetivo" type="Label" parent="MenuInicio/Fondo/Centro/Caja"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "Cazá y comé 10 presas sin morir de hambre ni ser atrapado por un cazador."
+text = "Cazá y comé 3 presas en cada nivel sin morir de hambre ni ser atrapado por un cazador."
 horizontal_alignment = 1
+
+[node name="Niveles" type="VBoxContainer" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Etiqueta" type="Label" parent="MenuInicio/Fondo/Centro/Caja/Niveles"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Nivel (se desbloquean al superar el anterior):"
+horizontal_alignment = 1
+
+[node name="Botones" type="HBoxContainer" parent="MenuInicio/Fondo/Centro/Caja/Niveles"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 10
+
+[node name="Nivel1" type="Button" parent="MenuInicio/Fondo/Centro/Caja/Niveles/Botones"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("GrupoNiveles")
+text = "1: Selva intacta"
+
+[node name="Nivel2" type="Button" parent="MenuInicio/Fondo/Centro/Caja/Niveles/Botones"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("GrupoNiveles")
+text = "2: Amenazada"
+
+[node name="Nivel3" type="Button" parent="MenuInicio/Fondo/Centro/Caja/Niveles/Botones"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("GrupoNiveles")
+text = "3: Degradada"
 
 [node name="Espacio" type="Control" parent="MenuInicio/Fondo/Centro/Caja"]
 custom_minimum_size = Vector2(0, 12)
@@ -443,3 +512,5 @@ text = "Salir del juego"
 [connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonContinuar" to="MenuPausa" method="_on_boton_continuar_pressed"]
 [connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonMenu" to="MenuPausa" method="_on_boton_menu_pressed"]
 [connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonSalir" to="MenuPausa" method="_on_boton_salir_pressed"]
+[connection signal="mensaje" from="Jugador" to="." method="_on_jugador_mensaje"]
+[connection signal="pressed" from="PantallaFinal/Fondo/Centro/Caja/BotonSiguiente" to="." method="_on_boton_siguiente_pressed"]

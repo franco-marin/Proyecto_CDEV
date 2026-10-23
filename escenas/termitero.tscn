@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/termitero.gd" id="1_script"]
+
+[node name="Termitero" type="Node3D" groups=["termiteros"]]
+script = ExtResource("1_script")

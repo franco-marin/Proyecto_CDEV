@@ -66,8 +66,9 @@ func _esperar_mundo() -> void:
 func _verificar_mundo() -> void:
 	_comprobar(main.get_node("Navegacion/Arboles").get_child_count() > 20, "se generaron los árboles")
 	_comprobar(get_nodes_in_group("comida").size() > 0, "hay frutas")
-	_comprobar(get_nodes_in_group("herbivoros_pequenos").size() > 0, "hay conejos")
-	_comprobar(get_nodes_in_group("carnivoros_pequenos").size() > 0, "hay zorros")
+	_comprobar(get_nodes_in_group("presas").size() > 5, "hay animales para cazar")
+	_comprobar(mundo.rio != null and mundo.rio.puntos.size() > 10, "se generó el río")
+	_comprobar(not mundo.en_agua(jugador.global_position), "el jugador empieza en tierra firme")
 	_comprobar(main.get_node("Pajaros").get_child_count() > 0, "hay pájaros")
 
 
@@ -137,14 +138,14 @@ func _terminar() -> void:
 
 # --- Utilidades --------------------------------------------------------------
 
-## Pone un conejo en una posición relativa al jugador y lo devuelve. Se le apaga la
+## Pone una corzuela (cae con un zarpazo) junto al jugador y la devuelve. Se le apaga la
 ## inteligencia para que no escape: la prueba revisa la caza, no la persecución.
 func _colocar_presa(desplazamiento: Vector3) -> Node3D:
-	for conejo in get_nodes_in_group("herbivoros_pequenos"):
-		conejo.set_physics_process(false)
-		conejo.global_position = mundo.punto_navegable(jugador.global_position + desplazamiento)
-		return conejo
-	_comprobar(false, "hay un conejo disponible para la prueba")
+	for corzuela in get_nodes_in_group("corzuelas"):
+		corzuela.set_physics_process(false)
+		corzuela.global_position = mundo.punto_navegable(jugador.global_position + desplazamiento)
+		return corzuela
+	_comprobar(false, "hay una corzuela disponible para la prueba")
 	return null
 
 
