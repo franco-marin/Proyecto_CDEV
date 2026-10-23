@@ -7,6 +7,8 @@ signal hambre_cambio(valor: float, maximo: float)
 signal comio(total: int)
 signal llego_al_destino
 signal murio(motivo: String)
+## Avisos para mostrar en pantalla (mordida de yacaré, trampa...).
+signal mensaje(texto: String)
 
 @export var velocidad_caminar := 3.5
 @export var velocidad_correr := 7.0
@@ -28,6 +30,17 @@ signal murio(motivo: String)
 ## Cuánto más rápido baja el hambre al correr.
 @export var gasto_al_correr := 3.0
 
+@export_group("Entorno")
+## Velocidad nadando respecto de la de caminar (en el agua no se puede correr).
+@export var multiplicador_nado := 0.6
+## Cuánto se hunde el cuerpo al nadar (el suelo tapa lo que queda abajo).
+@export var profundidad_nado := 0.42
+## A menos de esta distancia de una planta del sotobosque, el yaguareté está oculto.
+@export var radio_cobertura := 1.5
+## A menos de esta distancia de la basura, el hambre baja más rápido.
+@export var distancia_basura := 1.0
+@export var gasto_por_basura := 5.0
+
 @export_group("Primera persona")
 ## Radianes que gira la cámara por cada píxel que se mueve el mouse.
 @export var sensibilidad_mouse := 0.003
@@ -40,6 +53,12 @@ var hambre: float
 var presas_comidas := 0
 var vivo := true
 var primera_persona := false
+## Estado del entorno (lo leen la IA de los animales y el HUD).
+var nadando := false
+var oculto := false
+var cerca_de_basura := false
+## Segundos que le quedan sin poder correr por haber pisado una trampa.
+var segundos_sin_correr := 0.0
 
 var _yaw := 0.0  # giro horizontal de la mirada
 var _pitch := 0.0  # inclinación vertical de la mirada
@@ -48,6 +67,7 @@ var _moviendose := false
 var _corriendo := false
 var _comiendo := false
 var _espera_zarpazo := 0.0
+var _reloj_entorno := 0.0
 ## Presa elegida en tercera persona: si está viva la persigue y la ataca; si está
 ## abatida va a comérsela. Sin tipo a propósito (es un AnimalIA).
 var _presa = null
@@ -193,7 +213,46 @@ func puede_ser_objetivo() -> bool:
 
 
 func esta_corriendo() -> bool:
-	return _moviendose and _corriendo
+	return _moviendose and _corriendo and puede_correr()
+
+
+## Nadando o con una trampa en la pata no se puede correr.
+func puede_correr() -> bool:
+	return not nadando and segundos_sin_correr <= 0.0
+
+
+## Un yacaré lo mordió mientras nadaba.
+func recibir_mordida(cantidad: float) -> void:
+	if not vivo:
+		return
+	hambre = maxf(hambre - cantidad, 0.0)
+	mensaje.emit("¡Un yacaré te mordió!")
+	var escala := modelo.scale
+	var tween := create_tween()
+	tween.tween_property(modelo, "scale", escala * 0.85, 0.08)
+	tween.tween_property(modelo, "scale", escala, 0.15)
+
+
+## Pisó una trampa: no puede correr durante unos segundos.
+func atrapar_en_trampa(segundos: float) -> void:
+	if not vivo:
+		return
+	segundos_sin_correr = segundos
+	mensaje.emit("¡Pisaste una trampa!")
+
+
+## Textos para el HUD con lo que le está pasando ahora.
+func estados_activos() -> Array[String]:
+	var estados: Array[String] = []
+	if oculto:
+		estados.append("Oculto en la maleza")
+	if nadando:
+		estados.append("Nadando")
+	if segundos_sin_correr > 0.0:
+		estados.append("¡Trampa! No podés correr (%d s)" % ceili(segundos_sin_correr))
+	if cerca_de_basura:
+		estados.append("Basura cerca: te enferma")
+	return estados
 
 
 # --- Lógica de cada frame --------------------------------------------------------
@@ -204,6 +263,8 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= _gravedad * delta
 	_espera_zarpazo = maxf(_espera_zarpazo - delta, 0.0)
+	segundos_sin_correr = maxf(segundos_sin_correr - delta, 0.0)
+	_revisar_entorno(delta)
 
 	_gastar_hambre(delta)
 	if not vivo:
@@ -223,10 +284,39 @@ func _physics_process(delta: float) -> void:
 	_actualizar_animacion(horizontal.length())
 
 
+## Agua, maleza y basura alrededor. Nadar se revisa en cada frame; lo demás, 5 veces por segundo.
+func _revisar_entorno(delta: float) -> void:
+	nadando = Mundo.en_agua(global_position)
+	# Al nadar el cuerpo se hunde (y en primera persona, la vista queda a ras del agua).
+	modelo.position.y = lerpf(modelo.position.y, -profundidad_nado if nadando else 0.0, 6.0 * delta)
+	if primera_persona and not _comiendo:
+		var altura := _altura_ojos - (profundidad_nado * 0.8 if nadando else 0.0)
+		ojos.position.y = lerpf(ojos.position.y, altura, 6.0 * delta)
+
+	_reloj_entorno -= delta
+	if _reloj_entorno > 0.0:
+		return
+	_reloj_entorno = 0.2
+	oculto = not nadando and Mundo.hay_cobertura(global_position, radio_cobertura)
+	cerca_de_basura = false
+	for nodo in get_tree().get_nodes_in_group("basura"):
+		if Mundo.distancia_horizontal((nodo as Node3D).global_position, global_position) <= distancia_basura:
+			cerca_de_basura = true
+			break
+
+
+func _velocidad_actual() -> float:
+	if nadando:
+		return velocidad_caminar * multiplicador_nado
+	return velocidad_correr if _corriendo and puede_correr() else velocidad_caminar
+
+
 func _gastar_hambre(delta: float) -> void:
 	var gasto := hambre_maxima / segundos_hasta_morir
 	if esta_corriendo():
 		gasto *= gasto_al_correr
+	if cerca_de_basura:
+		gasto += gasto_por_basura
 	hambre = maxf(hambre - gasto * delta, 0.0)
 	hambre_cambio.emit(hambre, hambre_maxima)
 	if hambre <= 0.0:
@@ -272,7 +362,7 @@ func _calcular_movimiento(delta: float) -> Vector3:
 		return Vector3.ZERO
 	direccion = direccion.normalized()
 	modelo.rotation.y = lerp_angle(modelo.rotation.y, atan2(direccion.x, direccion.z), velocidad_giro * delta)
-	return direccion * (velocidad_correr if _corriendo else velocidad_caminar)
+	return direccion * _velocidad_actual()
 
 
 ## WASD relativo hacia donde mira el animal. Solo se corre hacia adelante (Shift + W).
@@ -284,8 +374,9 @@ func _movimiento_primera_persona() -> Vector3:
 	_corriendo = Input.is_action_pressed("correr") and avance > 0.0
 	var frente := Vector3(sin(_yaw), 0, cos(_yaw))
 	var derecha := Vector3(-cos(_yaw), 0, sin(_yaw))
-	var velocidad_avance := velocidad_correr if _corriendo else velocidad_caminar
-	return frente * avance * velocidad_avance + derecha * lateral * velocidad_caminar
+	var velocidad_avance := _velocidad_actual()
+	var velocidad_lateral := velocidad_caminar * (multiplicador_nado if nadando else 1.0)
+	return frente * avance * velocidad_avance + derecha * lateral * velocidad_lateral
 
 
 func _comer(abatida) -> void:
@@ -337,7 +428,7 @@ func _actualizar_animacion(velocidad: float) -> void:
 	if _comiendo or (animacion.current_animation == "zarpazo" and animacion.is_playing()):
 		return
 	if velocidad > 0.1:
-		animacion.speed_scale = 1.8 if _corriendo else 1.0
+		animacion.speed_scale = 1.8 if esta_corriendo() else 1.0
 		animacion.play("caminar", 0.2)
 	else:
 		animacion.speed_scale = 1.0

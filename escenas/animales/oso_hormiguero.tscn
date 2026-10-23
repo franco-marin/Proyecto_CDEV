@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/animales/herbivoro.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/modelo_animal.gd" id="2_modelo"]
+
+[sub_resource type="CylinderShape3D" id="Forma"]
+height = 0.8
+radius = 0.45
+
+[node name="OsoHormiguero" type="CharacterBody3D" groups=["osos_hormigueros", "herbivoros", "presas"]]
+collision_layer = 8
+collision_mask = 3
+script = ExtResource("1_script")
+velocidad_caminar = 1.2
+velocidad_correr = 3.8
+radio_deambular = 12.0
+radio_ataque = 1.4
+vida = 3
+valor_alimenticio = 55.0
+distancia_miedo_jugador = 6.0
+distancia_miedo_carnivoros = 0.0
+grupo_comida = "termiteros"
+
+[node name="Colision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+shape = SubResource("Forma")
+
+[node name="Modelo" type="Node3D" parent="."]
+script = ExtResource("2_modelo")
+tamano = 0.9
+color_cuerpo = Color(0.38, 0.33, 0.27, 1)
+color_detalle = Color(0.08, 0.07, 0.06, 1)
+largo_cuerpo = 1.2
+ancho_cuerpo = 0.45
+alto_cuerpo = 0.55
+tamano_cabeza = 0.25
+altura_cabeza = 0.0
+hocico = 3
+cola = 2
+franja = true
+
+[node name="Agente" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 0.5
+path_height_offset = 0.5
