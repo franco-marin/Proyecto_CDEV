@@ -46,6 +46,12 @@ var vivo := true
 var abatido := false
 ## Está dentro del río (solo los que pueden nadar llegan a estarlo).
 var en_agua := false
+## Recibió al menos un zarpazo: mientras se mueve va dejando un rastro de sangre.
+var herido := false
+
+## Metros recorridos desde la última gota del rastro.
+var _recorrido_rastro := 0.0
+const METROS_ENTRE_GOTAS := 0.6
 
 var _velocidad_actual := 0.0
 var _moviendose := false
@@ -82,6 +88,17 @@ func _physics_process(delta: float) -> void:
 		_pensar()
 
 	_mover(delta)
+	if herido:
+		_dejar_rastro(delta)
+
+
+## Un animal herido deja una gota de sangre cada tanto mientras se mueve.
+func _dejar_rastro(delta: float) -> void:
+	_recorrido_rastro += Vector2(velocity.x, velocity.z).length() * delta
+	if _recorrido_rastro >= METROS_ENTRE_GOTAS:
+		_recorrido_rastro = 0.0
+		var al_costado := Vector3(randf_range(-0.15, 0.15), 0, randf_range(-0.15, 0.15))
+		Efectos.gota(get_parent(), global_position + al_costado, randf_range(0.4, 0.8))
 
 
 ## Cada especie lo redefine con sus propias prioridades.
@@ -208,6 +225,9 @@ func recibir_golpe(atacante: Node3D) -> void:
 		return
 	vida -= 1
 	_al_ser_atacado(atacante)
+	herido = true
+	var desde_el_atacante := global_position - atacante.global_position
+	Efectos.salpicadura(get_parent(), global_position + Vector3.UP * 0.5 * modelo.scale.y, desde_el_atacante)
 	# Pequeño sacudón para que se note el golpe.
 	var escala: Vector3 = modelo.scale
 	var tween := create_tween()
@@ -241,6 +261,7 @@ func _abatir() -> void:
 	abatido = true
 	_salir_de_los_grupos()
 	add_to_group("presas_abatidas")
+	Efectos.gota(get_parent(), global_position, 3.5)  # charco debajo del animal caído
 	$Colision.set_deferred("disabled", true)
 	velocity = Vector3.ZERO
 	modelo.velocidad = 0.0
