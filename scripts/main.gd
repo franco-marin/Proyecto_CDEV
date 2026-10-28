@@ -139,6 +139,7 @@ func _ready() -> void:
 	# navegación). Hay que esperar a que termine antes de soltar a los animales.
 	_crear_rio()
 	_decorar_orillas()
+	_cubrir_de_pasto()
 	_generar_bosque()
 	navegacion.bake_navigation_mesh(true)
 	await navegacion.bake_finished
@@ -299,30 +300,31 @@ func _crear_rio() -> void:
 	Mundo.rio = rio
 
 
-## Pasto y piedras a lo largo de las orillas (algunas piedras quedan dentro del agua).
-## Son decoración: no tienen colisión ni esconden al yaguareté. Como son cientos, se
-## dibujan con MultiMesh: una sola instancia dibuja todas las copias de una malla.
+## Pasto corto en todo el suelo (también un poco más allá de los límites), menos el río
+## y su orilla.
+func _cubrir_de_pasto() -> void:
+	var pasto := Pasto.new()
+	pasto.name = "Pasto"
+	add_child(pasto)
+	pasto.generar(Mundo.MITAD_MAPA + 20.0, rio)
+
+
+## Piedras a lo largo de las orillas (algunas quedan dentro del agua). Son decoración:
+## no tienen colisión ni esconden al yaguareté. Se dibujan con MultiMesh: una sola
+## instancia dibuja todas las copias de una malla.
 func _decorar_orillas() -> void:
 	var E := FabricaFlora.Especie
-	var pastos := {}  # variante -> lista de Transform3D
 	var piedras := {}
 	for i in rio.puntos.size():
 		var centro: Vector3 = rio.puntos[i]
 		if absf(centro.x) > Mundo.MITAD_MAPA + 20.0 or absf(centro.z) > Mundo.MITAD_MAPA + 20.0:
 			continue
 		var normal := rio.normal_en(i)
-		var a_lo_largo := rio.direccion_en(i)
 		var medio: float = rio.anchos[i] / 2.0
 		for lado in [-1.0, 1.0]:
-			for k in randi_range(2, 4):
-				var punto: Vector3 = centro + normal * lado * (medio + randf_range(-0.2, 3.5)) \
-					+ a_lo_largo * randf_range(-1.0, 1.0)
-				_agregar_copia(pastos, punto, randf_range(0.8, 1.4))
 			if randf() < 0.35:
 				var punto: Vector3 = centro + normal * lado * (medio + randf_range(-1.5, 1.2))
 				_agregar_copia(piedras, punto, randf_range(0.7, 1.6))
-	for variante in pastos:
-		_multimalla(FabricaFlora.planta(E.PASTO, variante).malla, pastos[variante], false)
 	for variante in piedras:
 		_multimalla(FabricaFlora.planta(E.PIEDRA, variante).malla, piedras[variante], true)
 
