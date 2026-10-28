@@ -8,8 +8,12 @@ signal reanudado
 var habilitado := false
 
 
+@onready var casilla_pantalla_completa: CheckButton = $Fondo/Centro/Caja/PantallaCompleta
+
+
 func _ready() -> void:
 	visible = false
+	Mundo.preparar_casilla_pantalla_completa(casilla_pantalla_completa)
 
 
 func _unhandled_input(event: InputEvent) -> void:
