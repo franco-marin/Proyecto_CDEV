@@ -28,6 +28,35 @@ var rio: Rio = null
 var _cobertura := {}
 
 
+## Avisa a los menús cuando se cambia entre ventana y pantalla completa (por ejemplo con F11).
+signal pantalla_completa_cambiada(activa: bool)
+
+
+func _ready() -> void:
+	# Siempre activo, para que F11 funcione también con el juego en pausa.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("pantalla_completa"):
+		poner_pantalla_completa(not esta_en_pantalla_completa())
+		get_viewport().set_input_as_handled()
+
+
+func esta_en_pantalla_completa() -> bool:
+	var modo_ventana := DisplayServer.window_get_mode()
+	return modo_ventana == DisplayServer.WINDOW_MODE_FULLSCREEN \
+		or modo_ventana == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+
+
+## Cambia entre ventana y pantalla completa (sin bordes: ideal para grabar).
+func poner_pantalla_completa(activar: bool) -> void:
+	if activar == esta_en_pantalla_completa():
+		return
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if activar else DisplayServer.WINDOW_MODE_WINDOWED)
+	pantalla_completa_cambiada.emit(activar)
+
+
 ## Recarga el nivel. Con volver_al_menu = true se vuelve a elegir el modo de juego.
 func reiniciar(volver_al_menu: bool) -> void:
 	mostrar_menu = volver_al_menu

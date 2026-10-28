@@ -97,6 +97,7 @@ var _proxima_manada := 0
 @onready var botones_nivel: HBoxContainer = $MenuInicio/Fondo/Centro/Caja/Niveles/Botones
 @onready var deslizador_sensibilidad: HSlider = $MenuInicio/Fondo/Centro/Caja/Sensibilidad/Deslizador
 @onready var valor_sensibilidad: Label = $MenuInicio/Fondo/Centro/Caja/Sensibilidad/Valor
+@onready var casilla_pantalla_completa: CheckButton = $MenuInicio/Fondo/Centro/Caja/PantallaCompleta
 @onready var menu_pausa: CanvasLayer = $MenuPausa
 @onready var pantalla_final: CanvasLayer = $PantallaFinal
 @onready var titulo_final: Label = $PantallaFinal/Fondo/Centro/Caja/Titulo
@@ -126,6 +127,10 @@ func _ready() -> void:
 	deslizador_sensibilidad.value = Mundo.sensibilidad
 	valor_sensibilidad.text = str(Mundo.sensibilidad)
 	_preparar_botones_de_nivel()
+	# Casilla "Pantalla completa": refleja el modo actual y se actualiza si se cambia con F11.
+	casilla_pantalla_completa.button_pressed = Mundo.esta_en_pantalla_completa()
+	casilla_pantalla_completa.toggled.connect(Mundo.poner_pantalla_completa)
+	Mundo.pantalla_completa_cambiada.connect(casilla_pantalla_completa.set_pressed_no_signal)
 	if Mundo.mostrar_menu:
 		menu_inicio.visible = true
 		get_tree().paused = true

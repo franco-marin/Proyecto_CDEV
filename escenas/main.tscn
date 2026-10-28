@@ -446,6 +446,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "5"
 
+[node name="PantallaCompleta" type="CheckButton" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 16
+text = "Pantalla completa (F11)"
+
 [node name="MenuPausa" type="CanvasLayer" parent="."]
 process_mode = 3
 layer = 4
@@ -483,6 +489,12 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Continuar"
+
+[node name="PantallaCompleta" type="CheckButton" parent="MenuPausa/Fondo/Centro/Caja"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 18
+text = "Pantalla completa (F11)"
 
 [node name="BotonMenu" type="Button" parent="MenuPausa/Fondo/Centro/Caja"]
 custom_minimum_size = Vector2(260, 50)
