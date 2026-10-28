@@ -33,8 +33,8 @@ const INTERVALO_PENSAR := 0.25
 
 ## Segundos que queda en el suelo después de caer, si nadie se lo come.
 const SEGUNDOS_ABATIDO := 60.0
-## Si el yaguareté está escondido en la maleza, lo ven desde la mitad de distancia.
-const FACTOR_COBERTURA := 0.5
+## Si el yaguareté está escondido en la maleza, solo lo ven desde el 30 % de la distancia.
+const FACTOR_COBERTURA := 0.3
 
 var estado: Estado = Estado.DEAMBULAR
 ## Lo que está persiguiendo, de lo que huye o la fruta a la que va. Sin tipo a propósito:
@@ -125,7 +125,7 @@ func _centro_de_deambular() -> Vector3:
 
 
 ## Devuelve al yaguareté si lo ve a menos de "distancia". Si está escondido en la
-## maleza, solo lo ve desde la mitad de esa distancia.
+## maleza, solo lo ve desde una fracción de esa distancia (FACTOR_COBERTURA).
 func ver_al_jugador(distancia: float) -> Node3D:
 	var jugador = get_tree().get_first_node_in_group("jugador")
 	if not es_valido(jugador):
