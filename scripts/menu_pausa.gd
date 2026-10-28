@@ -13,10 +13,7 @@ var habilitado := false
 
 func _ready() -> void:
 	visible = false
-	# La casilla refleja el modo actual y se actualiza si se cambia con F11.
-	casilla_pantalla_completa.button_pressed = Mundo.esta_en_pantalla_completa()
-	casilla_pantalla_completa.toggled.connect(Mundo.poner_pantalla_completa)
-	Mundo.pantalla_completa_cambiada.connect(casilla_pantalla_completa.set_pressed_no_signal)
+	Mundo.preparar_casilla_pantalla_completa(casilla_pantalla_completa)
 
 
 func _unhandled_input(event: InputEvent) -> void:
