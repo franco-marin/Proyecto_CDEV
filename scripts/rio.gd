@@ -99,6 +99,17 @@ func _indice_cercano(punto: Vector3) -> int:
 	return clampi(int(round((a_lo_largo - _inicio) / PASO)), 0, puntos.size() - 1)
 
 
+## Dirección perpendicular al cauce en el punto i (hacia una de las orillas).
+func normal_en(i: int) -> Vector3:
+	return _normal(i)
+
+
+## Dirección en la que corre el río en el punto i.
+func direccion_en(i: int) -> Vector3:
+	var normal := _normal(i)
+	return Vector3(normal.z, 0, -normal.x)
+
+
 ## Dirección perpendicular al cauce en el punto i (en el plano del suelo).
 func _normal(i: int) -> Vector3:
 	var antes := puntos[maxi(i - 1, 0)]

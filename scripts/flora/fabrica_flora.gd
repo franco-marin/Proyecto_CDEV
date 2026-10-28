@@ -9,7 +9,7 @@ extends RefCounted
 ## en UNA sola malla con SurfaceTool. Cada especie tiene unas pocas variantes que se
 ## generan una sola vez y se reutilizan: todos los "palo rosa variante 2" comparten malla.
 
-enum Especie { PALO_ROSA, TIMBO, LAPACHO, PINDO, CHACHI, TACUARA, HELECHO, CARAGUATA, ARBUSTO }
+enum Especie { PALO_ROSA, TIMBO, LAPACHO, PINDO, CHACHI, TACUARA, HELECHO, CARAGUATA, ARBUSTO, PASTO, PIEDRA }
 
 const VARIANTES := 4
 const SHADER := preload("res://recursos/vegetacion.gdshader")
@@ -32,6 +32,9 @@ const COLORES := {
 	"caraguata": Color(0.34, 0.47, 0.21),
 	"caraguata_centro": Color(0.78, 0.15, 0.16),
 	"arbusto": Color(0.16, 0.35, 0.13),
+	"pasto": Color(0.42, 0.55, 0.2),
+	"pasto_seco": Color(0.6, 0.58, 0.32),
+	"piedra": Color(0.46, 0.45, 0.42),
 }
 
 ## Materiales del sotobosque: se recortan alrededor del jugador ("moverse entre la maleza").
@@ -89,6 +92,10 @@ static func _construir(especie: Especie, variante: int) -> Dictionary:
 			_caraguata(piezas, azar)
 		Especie.ARBUSTO:
 			_arbusto(piezas, azar)
+		Especie.PASTO:
+			_pasto(piezas, azar)
+		Especie.PIEDRA:
+			_piedra(piezas, azar)
 	datos["malla"] = piezas.construir()
 	return datos
 
@@ -223,6 +230,30 @@ static func _caraguata(piezas: Piezas, azar: RandomNumberGenerator) -> void:
 		_fronda(piezas, Vector3(0, 0.05, 0), angulo, azar.randf_range(-1.3, -0.6),
 			azar.randf_range(0.9, 1.3), 0.13, 0.25, 2, "caraguata")
 	piezas.agregar(_esfera(), _escalado(Vector3(0, 0.25, 0), Vector3(0.18, 0.3, 0.18)), "caraguata_centro")
+
+
+## Mata de pasto de la orilla: hojas finas que se abren. Es baja: no tapa ni esconde.
+static func _pasto(piezas: Piezas, azar: RandomNumberGenerator) -> void:
+	for i in azar.randi_range(12, 18):
+		var giro := azar.randf() * TAU
+		var hoja := Transform3D(Basis(Vector3.UP, giro) * Basis(Vector3.RIGHT, -azar.randf_range(0.9, 1.4)),
+			Vector3(azar.randf_range(-0.12, 0.12), 0, azar.randf_range(-0.12, 0.12)))
+		var largo := azar.randf_range(0.3, 0.6)
+		piezas.agregar(_caja(Vector3(0.03, 0.01, largo)), hoja.translated_local(Vector3(0, 0, largo / 2.0)),
+			"pasto" if azar.randf() < 0.75 else "pasto_seco")
+
+
+## Piedra de río: uno a tres bloques redondeados y facetados, con algo de musgo arriba.
+static func _piedra(piezas: Piezas, azar: RandomNumberGenerator) -> void:
+	for i in azar.randi_range(1, 3):
+		var radio := azar.randf_range(0.25, 0.6) / (1.0 + i * 0.4)
+		var centro := Vector3(azar.randf_range(-0.35, 0.35) * i, radio * 0.35, azar.randf_range(-0.35, 0.35) * i)
+		var roca := _esfera()
+		roca.radial_segments = 6
+		roca.rings = 3
+		piezas.agregar(roca, _escalado(centro, Vector3(radio * 1.2, radio * 0.7, radio)), "piedra")
+		if azar.randf() < 0.5:
+			piezas.agregar(_esfera(), _escalado(centro + Vector3(0, radio * 0.45, 0), Vector3(radio * 0.7, radio * 0.12, radio * 0.6)), "musgo")
 
 
 ## Arbusto denso del sotobosque (corta la visión a la altura del yaguareté).
