@@ -9,7 +9,7 @@ const CANTIDAD := 3
 const DATOS := [
 	{
 		"nombre": "Nivel 1: Selva intacta",
-		"presas_para_ganar": 1,  # TEMPORAL para pruebas: el valor real es 3
+		"presas_para_ganar": 2,
 		# Selva: árboles del dosel, palmeras pindó, helechos chachí y árboles fuera del
 		# límite del mapa. "talados" son tocones y árboles caídos (la deforestación).
 		"arboles_grandes": 155,
@@ -41,7 +41,7 @@ const DATOS := [
 	},
 	{
 		"nombre": "Nivel 2: Selva amenazada",
-		"presas_para_ganar": 1,  # TEMPORAL para pruebas: el valor real es 3
+		"presas_para_ganar": 2,
 		"arboles_grandes": 115,
 		"palmeras": 28,
 		"helechos_arborescentes": 50,
@@ -68,7 +68,7 @@ const DATOS := [
 	},
 	{
 		"nombre": "Nivel 3: Selva degradada",
-		"presas_para_ganar": 1,  # TEMPORAL para pruebas: el valor real es 3
+		"presas_para_ganar": 2,
 		"arboles_grandes": 70,
 		"palmeras": 16,
 		"helechos_arborescentes": 28,

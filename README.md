@@ -1,7 +1,7 @@
 # Bosque Hambriento
 
 Juego 3D hecho con **Godot 4.7**. Sos un yaguareté en la selva paranaense: en cada nivel
-tenés que cazar y comer 3 presas (tapires, pecaríes, corzuelas, carpinchos, osos
+tenés que cazar y comer 2 presas (tapires, pecaríes, corzuelas, carpinchos, osos
 hormigueros, ocelotes o yacarés) sin morir de hambre y sin que te atrape un cazador.
 Primero hay que abatirlas a zarpazos y después comerlas. La maleza te esconde y el río
 —que cruzás nadando— es una vía de escape, porque los cazadores no lo cruzan.

@@ -179,7 +179,7 @@ offset_bottom = 100.0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 22
-text = "Presas: 0 / 3"
+text = "Presas: 0 / 2"
 
 [node name="Nivel" type="Label" parent="HUD"]
 offset_left = 16.0
@@ -397,7 +397,7 @@ horizontal_alignment = 1
 [node name="Objetivo" type="Label" parent="MenuInicio/Fondo/Centro/Caja"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "Cazá y comé 3 presas en cada nivel sin morir de hambre ni ser atrapado por un cazador."
+text = "Cazá y comé 2 presas en cada nivel sin morir de hambre ni ser atrapado por un cazador."
 horizontal_alignment = 1
 
 [node name="Niveles" type="VBoxContainer" parent="MenuInicio/Fondo/Centro/Caja"]
