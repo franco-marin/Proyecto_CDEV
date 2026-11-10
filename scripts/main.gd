@@ -27,20 +27,34 @@ const DISTANCIA_RAYO := 1000.0
 const MASCARA_CLICK := 1
 ## Si se hace click a menos de esta distancia de un animal, se lo elige como presa.
 const RADIO_CLICK_PRESA := 1.6
+## En la caza inversa, click a menos de esta distancia del cazador: perseguirlo.
+const RADIO_CLICK_CAZADOR := 3.0
 ## Convierte la sensibilidad del menú (1 a 10) en radianes por píxel de mouse.
 const FACTOR_SENSIBILIDAD := 0.0006
 ## Segundos que se ve un aviso (por ejemplo, "¡Un yacaré te mordió!").
 const SEGUNDOS_MENSAJE := 2.5
 
+## Al perder se muestra un dato real sobre el yaguareté, para que el fracaso sea un momento
+## de concientización (ver SDD, "Riesgo y fracaso"). Hay uno por cada forma de perder.
+## Fuentes (verificadas en noviembre de 2025):
+##   - Presidencia de la Nación (argentina.gob.ar/node/56511): no más de 250 ejemplares,
+##     área de distribución reducida un 95 %, "En Peligro de Extinción" (Res. 1030/2004).
+##   - Ley 25.463 (2001): Monumento Natural Nacional.
+##   - Proyecto Yaguareté (CeIBA-CONICET), relevamiento 2025: amenazas principales son la
+##     caza del yaguareté y de sus presas, la deforestación y la fragmentación de la selva.
+const DATO_REAL_CAPTURADO := "En Argentina quedan unos 250 yaguaretés. " \
+	+ "La caza furtiva es una de sus principales amenazas: " \
+	+ "está en peligro de extinción y es Monumento Natural Nacional desde 2001."
+const DATO_REAL_HAMBRE := "En Argentina, el yaguareté perdió el 95% de su territorio. " \
+	+ "La deforestación y la caza de sus presas lo dejan sin alimento: " \
+	+ "hoy quedan unos 250 y está en peligro de extinción."
+
 const AYUDA_TERCERA := "Click derecho: caminar  ·  Click derecho sobre un animal: cazarlo y comerlo  ·  Shift: correr  ·  Rueda: zoom  ·  Esc: pausa"
 const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  ·  Click izquierdo: zarpazo  ·  E: comer una presa abatida  ·  Esc: pausa"
 
 @export_group("Selva")
-## Árboles del dosel (palo rosa, timbó, lapacho): sus copas tapan el cielo.
-@export var cantidad_arboles_grandes := 155
-@export var cantidad_palmeras := 38
-@export var cantidad_helechos_arborescentes := 70
-@export var cantidad_arboles_decorativos := 80
+## Las cantidades de árboles, palmeras, helechos, árboles talados y pájaros dependen del
+## nivel (ver niveles.gd); acá queda solo la maleza fuera de los límites del mapa.
 @export var cantidad_sotobosque_decorativo := 220
 
 @export_group("Recorte de la maleza")
@@ -49,8 +63,13 @@ const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  
 ## En tercera persona: radio del círculo en pantalla (proporción del alto de la pantalla).
 @export var radio_circulo_pantalla := 0.2
 
-@export_group("Ecosistema")
-@export var cantidad_pajaros := 14
+@export_group("Niebla")
+## Niebla volumétrica: la humedad de la selva, que la luz del sol atraviesa entre las
+## copas (SDD, "Estética visual"). Cuesta más que la niebla común: en una PC muy limitada
+## se puede apagar y queda solo la de profundidad.
+@export var niebla_volumetrica := true
+## Con la volumétrica encendida, la niebla común queda más suave para no tapar todo.
+@export var reduccion_niebla_comun := 0.5
 
 @export_group("Cámara")
 ## La cámara va por debajo del dosel (las copas empiezan a unos 10 m).
@@ -102,6 +121,14 @@ var _proxima_manada := 0
 @onready var titulo_final: Label = $PantallaFinal/Fondo/Centro/Caja/Titulo
 @onready var motivo_final: Label = $PantallaFinal/Fondo/Centro/Caja/Motivo
 @onready var boton_siguiente: Button = $PantallaFinal/Fondo/Centro/Caja/BotonSiguiente
+@onready var boton_reintentar: Button = $PantallaFinal/Fondo/Centro/Caja/BotonReintentar
+@onready var boton_menu: Button = $PantallaFinal/Fondo/Centro/Caja/BotonMenu
+@onready var concientizacion: Label = $PantallaFinal/Fondo/Centro/Caja/Concientizacion
+@onready var climax: Climax = $Climax
+## Sonido de la selva (pájaros) y del río. El del río se mueve por el cauce, al punto del
+## agua más cercano al yaguareté: así se oye más fuerte al acercarse a la orilla.
+@onready var sonido_ambiente: AudioStreamPlayer = $Ambiente
+@onready var sonido_rio: AudioStreamPlayer3D = $SonidoRio
 
 
 func _ready() -> void:
@@ -136,6 +163,7 @@ func _ready() -> void:
 	# 1) El río y la selva. 2) Calcular por dónde se puede caminar ("hornear" la
 	# navegación). Hay que esperar a que termine antes de soltar a los animales.
 	_crear_rio()
+	_empezar_sonidos()
 	_generar_bosque()
 	navegacion.bake_navigation_mesh(true)
 	await navegacion.bake_finished
@@ -154,12 +182,14 @@ func _process(delta: float) -> void:
 		camara.global_position = camara.global_position.lerp(objetivo, suavizado_camara * delta)
 		camara.look_at(jugador.global_position + Vector3.UP)
 	_actualizar_recorte_maleza()
+	_actualizar_sonido_rio()
 
 	if jugando and listo:
 		tiempo_jugado += delta
 		var cazador := _cazador_que_persigue()
-		aviso.visible = cazador != null
-		_actualizar_flecha(cazador)
+		# En el clímax los avisos los da climax.gd (y la flecha puede señalar a otro).
+		aviso.visible = cazador != null and not climax.activo()
+		_actualizar_flecha(climax.objetivo_de_la_flecha(cazador) if climax.activo() else cazador)
 		_actualizar_estado(delta)
 		if primera_persona:
 			aviso_comer.text = jugador.accion_disponible()
@@ -243,6 +273,12 @@ func _ordenar_movimiento(correr: bool) -> void:
 	var golpe := _raycast_desde_mouse()
 	if golpe.is_empty():
 		return
+	# Caza inversa: click sobre un cazador que huye (o cerca de él) para perseguirlo.
+	var cazador := climax.cazador_cerca_de(golpe.position, RADIO_CLICK_CAZADOR)
+	if cazador:
+		jugador.perseguir_a(cazador)
+		marcador.ocultar()
+		return
 	# ¿Se hizo click sobre un animal (vivo o abatido)? Entonces es una presa.
 	var presa := _presa_cerca_de(golpe.position, RADIO_CLICK_PRESA)
 	if presa:
@@ -281,8 +317,33 @@ func _presa_cerca_de(punto: Vector3, radio: float) -> Node3D:
 func _aplicar_ambiente() -> void:
 	var ambiente := entorno.environment.duplicate() as Environment
 	ambiente.fog_light_color = nivel.niebla
+	ambiente.volumetric_fog_enabled = niebla_volumetrica
+	if niebla_volumetrica:
+		ambiente.fog_density *= reduccion_niebla_comun
+		ambiente.volumetric_fog_density = nivel.niebla_volumetrica
+		ambiente.volumetric_fog_albedo = nivel.niebla
+		# Bajo el dosel casi no llega el sol: la luz ambiente también ilumina la niebla,
+		# así no queda oscura.
+		ambiente.volumetric_fog_ambient_inject = 0.5
 	entorno.environment = ambiente
 	sol.light_energy = nivel.luz
+
+
+## Los dos sonidos se repiten sin fin. Mientras el menú tiene el juego en pausa, no suenan.
+## (climax.gd apaga el de la selva al empezar la persecución.)
+func _empezar_sonidos() -> void:
+	# Cada nivel tiene su propio sonido de selva (ver niveles.gd). Se carga solo el del
+	# nivel que se juega, porque los archivos son pesados.
+	sonido_ambiente.stream = load(nivel.sonido_ambiente)
+	sonido_ambiente.volume_db = nivel.volumen_ambiente
+	for sonido in [sonido_ambiente, sonido_rio]:
+		sonido.finished.connect(sonido.play)
+		sonido.play()
+
+
+func _actualizar_sonido_rio() -> void:
+	if rio != null:
+		sonido_rio.global_position = rio.punto_de_agua_cercano(jugador.global_position) + Vector3.UP * 0.3
 
 
 func _crear_rio() -> void:
@@ -302,15 +363,18 @@ func _generar_bosque() -> void:
 	var troncos: Array[Vector3] = []
 	var limite := Mundo.MITAD_MAPA - 1.5
 	Mundo.limpiar_cobertura()
-	_plantar(cantidad_arboles_grandes, [E.PALO_ROSA, E.PALO_ROSA, E.TIMBO, E.LAPACHO], 5.5, limite, troncos, contenedor_arboles)
-	_plantar(cantidad_palmeras, [E.PINDO], 3.0, limite, troncos, contenedor_arboles)
-	_plantar(cantidad_helechos_arborescentes, [E.CHACHI], 2.5, limite, troncos, contenedor_arboles)
+	_plantar(nivel.arboles_grandes, [E.PALO_ROSA, E.PALO_ROSA, E.TIMBO, E.LAPACHO], 5.5, limite, troncos, contenedor_arboles)
+	_plantar(nivel.palmeras, [E.PINDO], 3.0, limite, troncos, contenedor_arboles)
+	_plantar(nivel.helechos_arborescentes, [E.CHACHI], 2.5, limite, troncos, contenedor_arboles)
+	# La deforestación: tocones y árboles caídos donde antes había selva. Necesitan lugar
+	# (el tronco caído llega hasta 7 m del tocón) y, como los árboles, son obstáculos.
+	_plantar(nivel.talados, [E.TOCON, E.TOCON, E.ARBOL_TALADO], 6.0, limite, troncos, contenedor_arboles)
 	var plantas_bajas := [E.ARBUSTO, E.ARBUSTO, E.ARBUSTO, E.HELECHO, E.HELECHO, E.HELECHO, E.CARAGUATA, E.CARAGUATA, E.TACUARA]
 	_plantar(nivel.sotobosque, plantas_bajas, 1.0, limite, troncos, contenedor_sotobosque)
 
 	# Selva decorativa fuera de los límites, para que el bosque no "termine" de golpe.
 	var afuera: Array[Vector3] = []
-	_plantar(cantidad_arboles_decorativos, [E.PALO_ROSA, E.TIMBO, E.LAPACHO, E.PINDO], 6.0, 85.0, afuera, contenedor_decorativos, Mundo.MITAD_MAPA + 4.0)
+	_plantar(nivel.arboles_decorativos, [E.PALO_ROSA, E.TIMBO, E.LAPACHO, E.PINDO], 6.0, 85.0, afuera, contenedor_decorativos, Mundo.MITAD_MAPA + 4.0)
 	_plantar(cantidad_sotobosque_decorativo, plantas_bajas, 1.5, 75.0, afuera, contenedor_sotobosque, Mundo.MITAD_MAPA + 3.0)
 
 
@@ -332,13 +396,16 @@ func _plantar(cantidad: int, especies: Array, separacion: float, limite: float,
 			continue
 		if _muy_cerca(punto, ocupados, separacion):
 			continue
+		var giro := randf() * TAU
+		if especie == FabricaFlora.Especie.ARBOL_TALADO and not _lugar_para_tronco_caido(punto, giro, limite, ocupados):
+			continue
 		if not sotobosque:
 			ocupados.append(punto)  # el sotobosque no ocupa lugar: puede crecer junto a otro
 		var planta := (ESCENA_ARBUSTO if sotobosque else ESCENA_ARBOL).instantiate()
 		planta.especie = especie
 		planta.variante = randi() % FabricaFlora.VARIANTES
 		planta.position = punto
-		planta.rotation.y = randf() * TAU
+		planta.rotation.y = giro
 		if sotobosque:
 			planta.scale = Vector3.ONE * randf_range(0.8, 1.3)
 			planta.set_instance_shader_parameter("tinte", Vector3.ONE * randf_range(0.8, 1.15))
@@ -347,6 +414,17 @@ func _plantar(cantidad: int, especies: Array, separacion: float, limite: float,
 			planta.get_node("Malla").set_instance_shader_parameter("tinte", Vector3.ONE * randf_range(0.85, 1.1))
 		contenedor.add_child(planta)
 		plantadas += 1
+
+
+## El tronco de un árbol talado queda tendido hasta 7 m del tocón (hacia +X, girado
+## "giro"): no tiene que caer en el río, salir del mapa ni atravesar otros troncos.
+func _lugar_para_tronco_caido(tocon: Vector3, giro: float, limite: float, ocupados: Array[Vector3]) -> bool:
+	for distancia in [2.5, 4.5, 7.0]:
+		var punto := tocon + Vector3(distancia, 0, 0).rotated(Vector3.UP, giro)
+		if maxf(absf(punto.x), absf(punto.z)) > limite or rio.en_agua(punto, 1.0) \
+				or _muy_cerca(punto, ocupados, 1.5):
+			return false
+	return true
 
 
 ## Pone frutas, termiteros, basura, trampas, animales, cazadores y pájaros según el nivel.
@@ -371,8 +449,8 @@ func _poblar_nivel() -> void:
 			for i in nivel.animales[especie]:
 				_crear_animal(especie)
 	for i in nivel.cazadores:
-		_crear_en(ESCENA_CAZADOR, Mundo.punto_aleatorio_lejos_de(jugador.global_position, 30.0))
-	for i in cantidad_pajaros:
+		_crear_en(ESCENA_CAZADOR, _punto_a_distancia(jugador.global_position, nivel.distancia_cazadores))
+	for i in nivel.pajaros:
 		_crear_pajaro()
 
 
@@ -434,11 +512,28 @@ func _crear_manada(tamano: int, centro := Vector3.INF) -> void:
 		pecari.global_position = punto + Vector3.UP * 0.2
 
 
+## La usa climax.gd para sumar cazadores en la persecución final.
+func crear_cazador_en(punto: Vector3) -> Node3D:
+	return _crear_en(ESCENA_CAZADOR, punto)
+
+
 func _crear_en(escena: PackedScene, punto: Vector3) -> Node3D:
 	var animal := escena.instantiate()
 	contenedor_animales.add_child(animal)
 	animal.global_position = punto + Vector3.UP * 0.2
 	return animal
+
+
+## Un punto en tierra firme entre "distancia" y un 30% más lejos de "centro". Si no hay
+## lugar a esa distancia (el borde del mapa, el río), uno cualquiera al menos así de lejos.
+func _punto_a_distancia(centro: Vector3, distancia: float) -> Vector3:
+	for intento in 20:
+		var direccion := Vector3.FORWARD.rotated(Vector3.UP, randf() * TAU)
+		var punto := Mundo.punto_navegable(centro + direccion * randf_range(distancia, distancia * 1.3))
+		var lejos := Mundo.distancia_horizontal(punto, centro)
+		if lejos >= distancia * 0.9 and lejos <= distancia * 1.4 and not Mundo.en_agua(punto, 1.0):
+			return punto
+	return Mundo.punto_aleatorio_lejos_de(centro, distancia)
 
 
 func _crear_pajaro() -> void:
@@ -559,14 +654,14 @@ func _on_jugador_comio(total: int) -> void:
 		if Mundo.nivel < Niveles.CANTIDAD:
 			_terminar(true, "Comiste %d presas: superaste el nivel." % total)
 		else:
-			_terminar(true, "Sobreviviste a los tres niveles de la selva.")
+			climax.empezar()  # último nivel: en vez de ganar, empieza la persecución final
 
 
 func _on_jugador_murio(motivo: String) -> void:
 	if motivo == "capturado":
-		_terminar(false, "Un cazador te atrapó.")
+		_terminar(false, "Un cazador te atrapó.", DATO_REAL_CAPTURADO)
 	else:
-		_terminar(false, "Te moriste de hambre.")
+		_terminar(false, "Te moriste de hambre.", DATO_REAL_HAMBRE)
 
 
 func _on_boton_reintentar_pressed() -> void:
@@ -586,7 +681,19 @@ func _actualizar_contador(total: int) -> void:
 	contador.text = "Presas: %d / %d" % [total, nivel.presas_para_ganar]
 
 
-func _terminar(gano: bool, texto: String) -> void:
+## Pantalla final de la experiencia, después de la caza inversa (la llama climax.gd).
+func terminar_climax(titulo: String, texto: String, dato: String) -> void:
+	_terminar(true, texto)
+	titulo_final.text = titulo
+	motivo_final.text = texto
+	concientizacion.text = dato
+	concientizacion.visible = true
+	boton_reintentar.visible = false
+	boton_menu.text = "Volver al menú"
+
+
+## "dato_real" solo se usa al perder: es el mensaje de concientización.
+func _terminar(gano: bool, texto: String, dato_real := "") -> void:
 	if terminado:
 		return
 	terminado = true
@@ -606,6 +713,11 @@ func _terminar(gano: bool, texto: String) -> void:
 		titulo_final.text = "¡Ganaste!"
 	motivo_final.text = "%s\nTiempo: %d segundos" % [texto, int(tiempo_jugado)]
 	boton_siguiente.visible = hay_siguiente
+	# Game over: el dato real y la vuelta al menú (sin "Reintentar"), como pide el SDD.
+	concientizacion.text = dato_real
+	concientizacion.visible = not gano
+	boton_reintentar.visible = gano
+	boton_menu.text = "Volver al menú" if not gano else "Menú"
 	pantalla_final.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Pausa todo el juego. La pantalla final sigue funcionando porque su

@@ -4,11 +4,17 @@ extends RefCounted
 ##   - salpicadura(): partículas rojas que saltan cuando un zarpazo acierta.
 ##   - gota(): mancha en el suelo. Los animales heridos van dejando un rastro de gotas
 ##     y, al caer, un charco. Las manchas se borran solas después de un rato.
+## Efectos de los disparos del cazador (nunca lastiman: el tiro siempre pega al costado):
+##   - fogonazo(): destello de luz y chispas en la punta del caño.
+##   - impacto(): polvo que salta del suelo, o astillas si el tiro pega en un tronco.
 
 const COLOR_SANGRE := Color(0.68, 0.03, 0.04)
 ## Como mucho tantas manchas a la vez: si hay más, se borran las más viejas.
 const MAXIMO_GOTAS := 250
 const SEGUNDOS_GOTA := 20.0
+const COLOR_FOGONAZO := Color(1.0, 0.78, 0.35)
+const COLOR_POLVO := Color(0.5, 0.43, 0.33)
+const COLOR_ASTILLAS := Color(0.76, 0.62, 0.42)
 
 static var _material_particula: StandardMaterial3D
 static var _material_gota: StandardMaterial3D
@@ -76,6 +82,65 @@ static func gota(padre: Node, posicion: Vector3, tamano := 1.0) -> void:
 		var vieja = _gotas.pop_front()
 		if is_instance_valid(vieja):
 			vieja.queue_free()
+
+
+## Destello en la punta del caño: una luz que se apaga enseguida y unas chispas hacia adelante.
+static func fogonazo(padre: Node, posicion: Vector3, direccion: Vector3) -> void:
+	var luz := OmniLight3D.new()
+	luz.light_color = COLOR_FOGONAZO
+	luz.light_energy = 6.0
+	luz.omni_range = 5.0
+	padre.add_child(luz)
+	luz.global_position = posicion
+	var tween := luz.create_tween()
+	tween.tween_property(luz, "light_energy", 0.0, 0.12)
+	tween.tween_callback(luz.queue_free)
+	_rafaga(padre, posicion, direccion, COLOR_FOGONAZO, true, 10, 0.12, 25.0, 4.0, 7.0, 0.035, Vector3.ZERO)
+
+
+## Donde pega el tiro: polvo que salta del suelo o astillas de madera si pegó en un tronco.
+static func impacto(padre: Node, posicion: Vector3, en_un_tronco: bool) -> void:
+	if en_un_tronco:
+		_rafaga(padre, posicion, Vector3.UP, COLOR_ASTILLAS, false, 12, 0.6, 70.0, 1.5, 3.0, 0.04, Vector3(0, -9.8, 0))
+	elif not Mundo.en_agua(posicion):
+		_rafaga(padre, posicion, Vector3.UP, COLOR_POLVO, false, 18, 0.8, 35.0, 1.5, 3.0, 0.07, Vector3(0, -4.0, 0))
+
+
+## Partículas que salen de golpe desde "posicion" hacia "direccion" y se borran solas.
+static func _rafaga(padre: Node, posicion: Vector3, direccion: Vector3, color: Color, brilla: bool,
+		cantidad: int, duracion: float, apertura: float, velocidad_min: float, velocidad_max: float,
+		radio: float, gravedad: Vector3) -> void:
+	var particulas := CPUParticles3D.new()
+	particulas.one_shot = true
+	particulas.emitting = false
+	particulas.amount = cantidad
+	particulas.lifetime = duracion
+	particulas.explosiveness = 0.95
+	particulas.direction = direccion.normalized()
+	particulas.spread = apertura
+	particulas.initial_velocity_min = velocidad_min
+	particulas.initial_velocity_max = velocidad_max
+	particulas.gravity = gravedad
+	particulas.scale_amount_min = 0.6
+	particulas.scale_amount_max = 1.4
+	var malla := SphereMesh.new()
+	malla.radius = radio
+	malla.height = radio * 2.0
+	malla.radial_segments = 4
+	malla.rings = 2
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 1.0
+	if brilla:
+		material.emission_enabled = true
+		material.emission = color
+		material.emission_energy_multiplier = 3.0
+	malla.material = material
+	particulas.mesh = malla
+	padre.add_child(particulas)
+	particulas.global_position = posicion
+	particulas.emitting = true
+	particulas.create_tween().tween_interval(duracion + 0.5).finished.connect(particulas.queue_free)
 
 
 static func _particula() -> StandardMaterial3D:
