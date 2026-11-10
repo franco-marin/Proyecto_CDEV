@@ -63,6 +63,14 @@ const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  
 ## En tercera persona: radio del círculo en pantalla (proporción del alto de la pantalla).
 @export var radio_circulo_pantalla := 0.2
 
+@export_group("Niebla")
+## Niebla volumétrica: la humedad de la selva, que la luz del sol atraviesa entre las
+## copas (SDD, "Estética visual"). Cuesta más que la niebla común: en una PC muy limitada
+## se puede apagar y queda solo la de profundidad.
+@export var niebla_volumetrica := true
+## Con la volumétrica encendida, la niebla común queda más suave para no tapar todo.
+@export var reduccion_niebla_comun := 0.5
+
 @export_group("Cámara")
 ## La cámara va por debajo del dosel (las copas empiezan a unos 10 m).
 @export var offset_camara := Vector3(0, 6.5, 8)
@@ -309,6 +317,14 @@ func _presa_cerca_de(punto: Vector3, radio: float) -> Node3D:
 func _aplicar_ambiente() -> void:
 	var ambiente := entorno.environment.duplicate() as Environment
 	ambiente.fog_light_color = nivel.niebla
+	ambiente.volumetric_fog_enabled = niebla_volumetrica
+	if niebla_volumetrica:
+		ambiente.fog_density *= reduccion_niebla_comun
+		ambiente.volumetric_fog_density = nivel.niebla_volumetrica
+		ambiente.volumetric_fog_albedo = nivel.niebla
+		# Bajo el dosel casi no llega el sol: la luz ambiente también ilumina la niebla,
+		# así no queda oscura.
+		ambiente.volumetric_fog_ambient_inject = 0.5
 	entorno.environment = ambiente
 	sol.light_energy = nivel.luz
 
@@ -433,7 +449,7 @@ func _poblar_nivel() -> void:
 			for i in nivel.animales[especie]:
 				_crear_animal(especie)
 	for i in nivel.cazadores:
-		_crear_en(ESCENA_CAZADOR, Mundo.punto_aleatorio_lejos_de(jugador.global_position, 30.0))
+		_crear_en(ESCENA_CAZADOR, _punto_a_distancia(jugador.global_position, nivel.distancia_cazadores))
 	for i in nivel.pajaros:
 		_crear_pajaro()
 
@@ -506,6 +522,18 @@ func _crear_en(escena: PackedScene, punto: Vector3) -> Node3D:
 	contenedor_animales.add_child(animal)
 	animal.global_position = punto + Vector3.UP * 0.2
 	return animal
+
+
+## Un punto en tierra firme entre "distancia" y un 30% más lejos de "centro". Si no hay
+## lugar a esa distancia (el borde del mapa, el río), uno cualquiera al menos así de lejos.
+func _punto_a_distancia(centro: Vector3, distancia: float) -> Vector3:
+	for intento in 20:
+		var direccion := Vector3.FORWARD.rotated(Vector3.UP, randf() * TAU)
+		var punto := Mundo.punto_navegable(centro + direccion * randf_range(distancia, distancia * 1.3))
+		var lejos := Mundo.distancia_horizontal(punto, centro)
+		if lejos >= distancia * 0.9 and lejos <= distancia * 1.4 and not Mundo.en_agua(punto, 1.0):
+			return punto
+	return Mundo.punto_aleatorio_lejos_de(centro, distancia)
 
 
 func _crear_pajaro() -> void:

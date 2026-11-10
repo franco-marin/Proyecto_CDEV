@@ -22,6 +22,9 @@ const DATOS := [
 		"frutas": 28,
 		"termiteros": 18,
 		"cazadores": 0,
+		# A cuántos metros del yaguareté aparecen los cazadores al empezar: el SDD pide que
+		# aumenten "en número y cercanía" nivel a nivel.
+		"distancia_cazadores": 45.0,
 		"basura": 0,
 		"trampas": 0,
 		# Animales de la selva paranaense. Los pecaríes andan en manadas.
@@ -33,6 +36,8 @@ const DATOS := [
 		"rio_espuma": 0.0,
 		"botellas_en_rio": 0,
 		"niebla": Color(0.42, 0.52, 0.42),
+		# Densidad de la niebla volumétrica (la humedad de la selva, ver main.gd).
+		"niebla_volumetrica": 0.018,
 		"luz": 1.3,
 		# Sonido de la selva: los pájaros se van callando nivel a nivel (en el 2 hay menos y
 		# en el 3 ya no se oyen animales). El volumen está en dB.
@@ -52,6 +57,7 @@ const DATOS := [
 		"frutas": 20,
 		"termiteros": 12,
 		"cazadores": 2,
+		"distancia_cazadores": 40.0,
 		"basura": 25,
 		"trampas": 0,
 		"animales": {"tapir": 2, "pecari": 6, "corzuela": 5, "carpincho": 3,
@@ -62,6 +68,7 @@ const DATOS := [
 		"rio_espuma": 0.2,
 		"botellas_en_rio": 12,
 		"niebla": Color(0.45, 0.5, 0.42),
+		"niebla_volumetrica": 0.022,
 		"luz": 1.15,
 		"sonido_ambiente": "res://sonidos/sonido_ambiente_nivel_2.wav",
 		"volumen_ambiente": 0.0,
@@ -79,6 +86,7 @@ const DATOS := [
 		"frutas": 14,
 		"termiteros": 8,
 		"cazadores": 3,
+		"distancia_cazadores": 22.0,
 		"basura": 50,
 		"trampas": 12,
 		"animales": {"tapir": 1, "pecari": 4, "corzuela": 3, "carpincho": 2,
@@ -89,6 +97,7 @@ const DATOS := [
 		"rio_espuma": 0.5,
 		"botellas_en_rio": 25,
 		"niebla": Color(0.5, 0.5, 0.47),
+		"niebla_volumetrica": 0.028,
 		"luz": 0.95,
 		"sonido_ambiente": "res://sonidos/sonido_ambiente_nivel_3.wav",
 		"volumen_ambiente": 0.0,

@@ -5,6 +5,9 @@ extends Node3D
 ## la velocidad. Es el mismo estilo que ModeloAnimal, pero bípedo y con un rifle en las manos.
 ## La piel es gris a propósito: es un personaje genérico, sin rasgos ni etnia.
 
+## Una pierna llegó adelante y pisa el suelo (el cazador la usa para el sonido de las botas).
+signal paso
+
 @export var tamano := 1.0:
 	set(valor):
 		tamano = valor
@@ -51,6 +54,7 @@ var _piernas: Array[Node3D] = []
 var _y_torso := 0.0
 var _fase := 0.0
 var _fase_respirar := 0.0
+var _ultimo_paso := 0
 
 
 func _ready() -> void:
@@ -138,6 +142,12 @@ func _process(delta: float) -> void:
 	var giro := sin(_fase) * 0.6 * movimiento
 	_piernas[0].rotation.x = giro
 	_piernas[1].rotation.x = -giro
+	# Cada vez que una pierna llega a su punto más adelantado, pisa (dos pasos por ciclo).
+	var numero_de_paso := floori((_fase + PI / 2.0) / PI)
+	if numero_de_paso != _ultimo_paso:
+		_ultimo_paso = numero_de_paso
+		if movimiento > 0.3:
+			paso.emit()
 	# Al caminar sube y baja con cada paso; quieto, respira despacio.
 	_fase_respirar += delta * 2.0
 	var respirar := sin(_fase_respirar) * 0.01 * (1.0 - movimiento)

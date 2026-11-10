@@ -35,6 +35,12 @@ extends AnimalIA
 ## líder y cuántos metros van más atrás que él.
 @export var separacion_lateral := 6.0
 @export var atraso_respecto_del_lider := 3.0
+
+@export_group("Sonido")
+## Probabilidad de pisar una rama seca en cada paso: baja en suelo abierto y mayor al
+## atravesar la maleza.
+@export var probabilidad_rama := 0.05
+@export var probabilidad_rama_en_maleza := 0.3
 ## Velocidad huyendo asustado en la caza inversa. Es mayor que la del yaguareté furioso
 ## (8,4): no se lo puede alcanzar hasta que se cansa (ver cansarse()).
 @export var velocidad_huida := 9.0
@@ -69,11 +75,25 @@ var _recargando := 0.0
 @onready var sonido_disparo: AudioStreamPlayer3D = $Disparo
 @onready var sonido_gatillo: AudioStreamPlayer3D = $Gatillo
 @onready var sonido_recarga: AudioStreamPlayer3D = $Recarga
+## Botas: suena una de las variantes (al azar) en cada paso del modelo.
+@onready var sonido_pasos: AudioStreamPlayer3D = $Pasos
+@onready var sonido_rama: AudioStreamPlayer3D = $Rama
 
 
 func _ready() -> void:
 	super()
 	balas = balas_por_cargador
+	# SDD: las "pisadas pesadas de botas" anuncian a los cazadores antes de verlos.
+	modelo.paso.connect(_al_pisar)
+
+
+## En cada paso suena la bota y, de vez en cuando, una rama seca que se quiebra
+## (más seguido si va por la maleza).
+func _al_pisar() -> void:
+	sonido_pasos.play()
+	var en_maleza := Mundo.hay_cobertura(global_position, 1.5)
+	if randf() < (probabilidad_rama_en_maleza if en_maleza else probabilidad_rama):
+		sonido_rama.play()
 
 
 func _physics_process(delta: float) -> void:
