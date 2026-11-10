@@ -32,8 +32,14 @@ extends Node3D
 
 ## La IA escribe aquí la velocidad actual; las piernas se mueven más rápido cuanto mayor sea.
 var velocidad := 0.0
+## Con true sube el rifle hasta el hombro (la IA lo activa mientras apunta).
+var apuntando := false
 
 var _torso: Node3D
+## Brazos y rifle cuelgan de este pivote, a la altura de los hombros: así suben juntos al apuntar.
+var _armas: Node3D
+## Golpe del retroceso al disparar: 1 justo al disparar, vuelve a 0 enseguida.
+var _retroceso := 0.0
 var _piernas: Array[Node3D] = []
 var _y_torso := 0.0
 var _fase := 0.0
@@ -85,17 +91,30 @@ func _reconstruir() -> void:
 	_caja(cabeza, Vector3(0.32, 0.14, 0.32), Vector3(0, 0.25, 0), sombrero)  # copa
 
 	# Brazos hacia adelante y hacia el centro, sosteniendo el rifle.
+	_armas = Node3D.new()
+	_armas.position = Vector3(0, 0.55, 0)
+	_torso.add_child(_armas)
 	for x in [1, -1]:
 		var hombro := Node3D.new()
-		hombro.position = Vector3(x * 0.31, 0.55, 0)
+		hombro.position = Vector3(x * 0.31, 0, 0)
 		hombro.rotation = Vector3(-1.3, -x * 0.35, 0)
-		_torso.add_child(hombro)
+		_armas.add_child(hombro)
 		_caja(hombro, Vector3(0.14, 0.6, 0.14), Vector3(0, -0.3, 0), camisa)
 		_caja(hombro, Vector3.ONE * 0.12, Vector3(0, -0.62, 0), piel)  # mano
 
 	# Rifle: culata de madera y caño negro, apuntando hacia adelante.
-	_caja(_torso, Vector3(0.08, 0.12, 0.4), Vector3(0, 0.4, 0.35), madera)
-	_caja(_torso, Vector3(0.05, 0.05, 0.6), Vector3(0, 0.42, 0.85), negro)
+	_caja(_armas, Vector3(0.08, 0.12, 0.4), Vector3(0, -0.15, 0.35), madera)
+	_caja(_armas, Vector3(0.05, 0.05, 0.6), Vector3(0, -0.13, 0.85), negro)
+
+
+## Punta del caño en coordenadas del mundo: de ahí sale el fogonazo del disparo.
+func punta_del_canon() -> Vector3:
+	return _armas.to_global(Vector3(0, -0.13, 1.15))
+
+
+## Sacudida del rifle hacia atrás y hacia arriba al disparar.
+func disparar() -> void:
+	_retroceso = 1.0
 
 
 func _process(delta: float) -> void:
@@ -110,6 +129,12 @@ func _process(delta: float) -> void:
 	_fase_respirar += delta * 2.0
 	var respirar := sin(_fase_respirar) * 0.01 * (1.0 - movimiento)
 	_torso.position.y = _y_torso + absf(sin(_fase)) * 0.04 * movimiento + respirar
+	# Apuntando, el rifle sube al hombro; el retroceso lo empuja atrás y arriba un instante.
+	var altura_armas := 0.55 + (0.14 if apuntando else 0.0)
+	_armas.position.y = lerpf(_armas.position.y, altura_armas, 10.0 * delta)
+	_retroceso = move_toward(_retroceso, 0.0, delta * 6.0)
+	_armas.position.z = -0.1 * _retroceso
+	_armas.rotation.x = -0.35 * _retroceso
 
 
 func _caja(padre: Node3D, medidas: Vector3, posicion: Vector3, material: Material) -> MeshInstance3D:

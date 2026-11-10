@@ -25,6 +25,10 @@ shape = SubResource("Forma")
 [node name="Modelo" type="Node3D" parent="."]
 script = ExtResource("2_modelo")
 
+[node name="Disparo" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+max_distance = 80.0
+
 [node name="Agente" type="NavigationAgent3D" parent="."]
 path_desired_distance = 0.5
 target_desired_distance = 0.5
