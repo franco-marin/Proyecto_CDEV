@@ -32,6 +32,21 @@ const FACTOR_SENSIBILIDAD := 0.0006
 ## Segundos que se ve un aviso (por ejemplo, "¡Un yacaré te mordió!").
 const SEGUNDOS_MENSAJE := 2.5
 
+## Al perder se muestra un dato real sobre el yaguareté, para que el fracaso sea un momento
+## de concientización (ver SDD, "Riesgo y fracaso"). Hay uno por cada forma de perder.
+## Fuentes (verificadas en noviembre de 2025):
+##   - Presidencia de la Nación (argentina.gob.ar/node/56511): no más de 250 ejemplares,
+##     área de distribución reducida un 95 %, "En Peligro de Extinción" (Res. 1030/2004).
+##   - Ley 25.463 (2001): Monumento Natural Nacional.
+##   - Proyecto Yaguareté (CeIBA-CONICET), relevamiento 2025: amenazas principales son la
+##     caza del yaguareté y de sus presas, la deforestación y la fragmentación de la selva.
+const DATO_REAL_CAPTURADO := "En Argentina quedan unos 250 yaguaretés. " \
+	+ "La caza furtiva es una de sus principales amenazas: " \
+	+ "está en peligro de extinción y es Monumento Natural Nacional desde 2001."
+const DATO_REAL_HAMBRE := "En Argentina, el yaguareté perdió el 95% de su territorio. " \
+	+ "La deforestación y la caza de sus presas lo dejan sin alimento: " \
+	+ "hoy quedan unos 250 y está en peligro de extinción."
+
 const AYUDA_TERCERA := "Click derecho: caminar  ·  Click derecho sobre un animal: cazarlo y comerlo  ·  Shift: correr  ·  Rueda: zoom  ·  Esc: pausa"
 const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  ·  Click izquierdo: zarpazo  ·  E: comer una presa abatida  ·  Esc: pausa"
 
@@ -102,6 +117,9 @@ var _proxima_manada := 0
 @onready var titulo_final: Label = $PantallaFinal/Fondo/Centro/Caja/Titulo
 @onready var motivo_final: Label = $PantallaFinal/Fondo/Centro/Caja/Motivo
 @onready var boton_siguiente: Button = $PantallaFinal/Fondo/Centro/Caja/BotonSiguiente
+@onready var boton_reintentar: Button = $PantallaFinal/Fondo/Centro/Caja/BotonReintentar
+@onready var boton_menu: Button = $PantallaFinal/Fondo/Centro/Caja/BotonMenu
+@onready var concientizacion: Label = $PantallaFinal/Fondo/Centro/Caja/Concientizacion
 
 
 func _ready() -> void:
@@ -564,9 +582,9 @@ func _on_jugador_comio(total: int) -> void:
 
 func _on_jugador_murio(motivo: String) -> void:
 	if motivo == "capturado":
-		_terminar(false, "Un cazador te atrapó.")
+		_terminar(false, "Un cazador te atrapó.", DATO_REAL_CAPTURADO)
 	else:
-		_terminar(false, "Te moriste de hambre.")
+		_terminar(false, "Te moriste de hambre.", DATO_REAL_HAMBRE)
 
 
 func _on_boton_reintentar_pressed() -> void:
@@ -586,7 +604,8 @@ func _actualizar_contador(total: int) -> void:
 	contador.text = "Presas: %d / %d" % [total, nivel.presas_para_ganar]
 
 
-func _terminar(gano: bool, texto: String) -> void:
+## "dato_real" solo se usa al perder: es el mensaje de concientización.
+func _terminar(gano: bool, texto: String, dato_real := "") -> void:
 	if terminado:
 		return
 	terminado = true
@@ -606,6 +625,11 @@ func _terminar(gano: bool, texto: String) -> void:
 		titulo_final.text = "¡Ganaste!"
 	motivo_final.text = "%s\nTiempo: %d segundos" % [texto, int(tiempo_jugado)]
 	boton_siguiente.visible = hay_siguiente
+	# Game over: el dato real y la vuelta al menú (sin "Reintentar"), como pide el SDD.
+	concientizacion.text = dato_real
+	concientizacion.visible = not gano
+	boton_reintentar.visible = gano
+	boton_menu.text = "Volver al menú" if not gano else "Menú"
 	pantalla_final.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Pausa todo el juego. La pantalla final sigue funcionando porque su

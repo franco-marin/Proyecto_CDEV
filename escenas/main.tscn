@@ -293,6 +293,16 @@ theme_override_font_sizes/font_size = 22
 text = "Motivo"
 horizontal_alignment = 1
 
+[node name="Concientizacion" type="Label" parent="PantallaFinal/Fondo/Centro/Caja"]
+visible = false
+custom_minimum_size = Vector2(680, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.86, 0.55, 1)
+theme_override_font_sizes/font_size = 19
+text = "Dato real"
+horizontal_alignment = 1
+autowrap_mode = 3
+
 [node name="BotonSiguiente" type="Button" parent="PantallaFinal/Fondo/Centro/Caja"]
 visible = false
 custom_minimum_size = Vector2(220, 50)
