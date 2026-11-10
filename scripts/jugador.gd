@@ -60,6 +60,18 @@ var cerca_de_basura := false
 ## Segundos que le quedan sin poder correr por haber pisado una trampa.
 var segundos_sin_correr := 0.0
 
+## Clímax (lo controla climax.gd). En todo el clímax no caza, no come, el hambre no baja
+## y los cazadores no lo pueden atrapar: así todos llegan a ver la caza inversa.
+var modo_climax := false
+## Acorralado: no se puede mover y la mirada va sola hacia "punto_de_atencion".
+var quieto_forzado := false
+var punto_de_atencion = null  # Vector3 o null
+## Caza inversa: recupera el instinto y corre más rápido.
+var furia := false
+const MULTIPLICADOR_FURIA := 1.2
+## Caza inversa en tercera persona: lo sigue corriendo (click derecho sobre el cazador).
+var _seguido: Node3D = null
+
 var _yaw := 0.0  # giro horizontal de la mirada
 var _pitch := 0.0  # inclinación vertical de la mirada
 var _fase_balanceo := 0.0
@@ -104,13 +116,13 @@ func configurar_primera_persona(activar: bool, sensibilidad: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not primera_persona or not vivo:
 		return
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not quieto_forzado:
 		_yaw -= event.relative.x * sensibilidad_mouse
 		_pitch = clampf(_pitch - event.relative.y * sensibilidad_mouse,
 			-deg_to_rad(angulo_maximo_abajo), deg_to_rad(angulo_maximo_arriba))
 	elif event.is_action_pressed("atacar"):
 		zarpazo()
-	elif event.is_action_pressed("comer") and not _comiendo:
+	elif event.is_action_pressed("comer") and not _comiendo and not modo_climax:
 		var abatida := presa_al_alcance(false)
 		if abatida:
 			_comer(abatida)
@@ -143,7 +155,7 @@ func _process(delta: float) -> void:
 
 ## Golpe con la pata delantera. Si hay una presa viva al alcance y de frente, la lastima.
 func zarpazo() -> void:
-	if not vivo or _comiendo or _espera_zarpazo > 0.0:
+	if not vivo or _comiendo or _espera_zarpazo > 0.0 or modo_climax:
 		return
 	_espera_zarpazo = espera_entre_zarpazos
 	animacion.speed_scale = 1.0
@@ -178,7 +190,7 @@ func presa_al_alcance(viva: bool) -> Node3D:
 
 ## Para el aviso en pantalla de primera persona: qué se puede hacer ahora.
 func accion_disponible() -> String:
-	if _comiendo:
+	if _comiendo or modo_climax:
 		return ""
 	if presa_al_alcance(false):
 		return "E: comer"
@@ -190,21 +202,37 @@ func accion_disponible() -> String:
 # --- Órdenes de tercera persona (las llama la escena principal) -----------------
 
 func ir_a(punto: Vector3, correr := false) -> void:
-	if not vivo or _comiendo:
+	if not vivo or _comiendo or quieto_forzado:
 		return
 	_presa = null
+	_seguido = null
 	_navegar(punto, correr)
 
 
 ## Persigue a una presa y la ataca; cuando cae, va a comérsela.
 func ir_a_cazar(presa: Node3D, correr := false) -> void:
+	if modo_climax:
+		ir_a(presa.global_position, correr)  # en el clímax no se caza: solo camina hasta ahí
+		return
 	if not vivo or _comiendo:
 		return
 	_presa = presa
 	_navegar(presa.global_position, correr)
 
 
+## Caza inversa en tercera persona: corre detrás del cazador sin tener que hacer click
+## a cada rato.
+func perseguir_a(nodo: Node3D, correr := true) -> void:
+	if not vivo or quieto_forzado:
+		return
+	_presa = null
+	_seguido = nodo
+	_navegar(nodo.global_position, correr)
+
+
 func ser_capturado() -> void:
+	if modo_climax:
+		return
 	_morir("capturado")
 
 
@@ -271,12 +299,16 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var horizontal := Vector3.ZERO
-	if _comiendo:
+	if quieto_forzado:
+		_moviendose = false
+		_mirar_al_punto_de_atencion(delta)
+	elif _comiendo:
 		_moviendose = false
 	elif primera_persona:
 		horizontal = _movimiento_primera_persona()
 	else:
 		_seguir_presa()
+		_seguir_al_seguido()
 		horizontal = _calcular_movimiento(delta)
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
@@ -308,10 +340,13 @@ func _revisar_entorno(delta: float) -> void:
 func _velocidad_actual() -> float:
 	if nadando:
 		return velocidad_caminar * multiplicador_nado
-	return velocidad_correr if _corriendo and puede_correr() else velocidad_caminar
+	var corriendo := velocidad_correr * (MULTIPLICADOR_FURIA if furia else 1.0)
+	return corriendo if _corriendo and puede_correr() else velocidad_caminar
 
 
 func _gastar_hambre(delta: float) -> void:
+	if modo_climax:
+		return  # en el clímax la barra queda como está
 	var gasto := hambre_maxima / segundos_hasta_morir
 	if esta_corriendo():
 		gasto *= gasto_al_correr
@@ -349,11 +384,37 @@ func _seguir_presa() -> void:
 		_moviendose = true
 
 
+## Tercera persona, caza inversa: el destino se actualiza porque el cazador se mueve.
+func _seguir_al_seguido() -> void:
+	if _seguido == null:
+		return
+	if not is_instance_valid(_seguido):
+		_seguido = null
+		_detener()
+		return
+	agente.target_position = _seguido.global_position
+	_moviendose = true
+
+
+## Acorralado: la mirada (o el cuerpo, en tercera persona) gira sola hacia lo que pasa.
+func _mirar_al_punto_de_atencion(delta: float) -> void:
+	if punto_de_atencion == null:
+		return
+	var hacia: Vector3 = punto_de_atencion - global_position
+	if Vector2(hacia.x, hacia.z).length() < 0.01:
+		return
+	var giro := atan2(hacia.x, hacia.z)
+	modelo.rotation.y = lerp_angle(modelo.rotation.y, giro, 4.0 * delta)
+	if primera_persona:
+		_yaw = lerp_angle(_yaw, giro, 4.0 * delta)
+		_pitch = lerpf(_pitch, 0.0, 4.0 * delta)
+
+
 func _calcular_movimiento(delta: float) -> Vector3:
 	if not _moviendose:
 		return Vector3.ZERO
 	if agente.is_navigation_finished():
-		if _presa == null:
+		if _presa == null and _seguido == null:
 			_detener()
 		return Vector3.ZERO
 	var direccion := agente.get_next_path_position() - global_position

@@ -9,7 +9,7 @@ const CANTIDAD := 3
 const DATOS := [
 	{
 		"nombre": "Nivel 1: Selva intacta",
-		"presas_para_ganar": 3,
+		"presas_para_ganar": 1,  # TEMPORAL para pruebas: el valor real es 3
 		# Selva: árboles del dosel, palmeras pindó, helechos chachí y árboles fuera del
 		# límite del mapa. "talados" son tocones y árboles caídos (la deforestación).
 		"arboles_grandes": 155,
@@ -34,10 +34,14 @@ const DATOS := [
 		"botellas_en_rio": 0,
 		"niebla": Color(0.42, 0.52, 0.42),
 		"luz": 1.3,
+		# Sonido de la selva: los pájaros se van callando nivel a nivel (en el 2 hay menos y
+		# en el 3 ya no se oyen animales). El volumen está en dB.
+		"sonido_ambiente": "res://sonidos/sonido_naturaleza.wav",
+		"volumen_ambiente": 0.0,
 	},
 	{
 		"nombre": "Nivel 2: Selva amenazada",
-		"presas_para_ganar": 3,
+		"presas_para_ganar": 1,  # TEMPORAL para pruebas: el valor real es 3
 		"arboles_grandes": 115,
 		"palmeras": 28,
 		"helechos_arborescentes": 50,
@@ -59,10 +63,12 @@ const DATOS := [
 		"botellas_en_rio": 12,
 		"niebla": Color(0.45, 0.5, 0.42),
 		"luz": 1.15,
+		"sonido_ambiente": "res://sonidos/sonido_ambiente_nivel_2.wav",
+		"volumen_ambiente": 0.0,
 	},
 	{
 		"nombre": "Nivel 3: Selva degradada",
-		"presas_para_ganar": 3,
+		"presas_para_ganar": 1,  # TEMPORAL para pruebas: el valor real es 3
 		"arboles_grandes": 70,
 		"palmeras": 16,
 		"helechos_arborescentes": 28,
@@ -72,7 +78,7 @@ const DATOS := [
 		"sotobosque": 550,
 		"frutas": 14,
 		"termiteros": 8,
-		"cazadores": 5,
+		"cazadores": 3,
 		"basura": 50,
 		"trampas": 12,
 		"animales": {"tapir": 1, "pecari": 4, "corzuela": 3, "carpincho": 2,
@@ -84,6 +90,8 @@ const DATOS := [
 		"botellas_en_rio": 25,
 		"niebla": Color(0.5, 0.5, 0.47),
 		"luz": 0.95,
+		"sonido_ambiente": "res://sonidos/sonido_ambiente_nivel_3.wav",
+		"volumen_ambiente": 0.0,
 	},
 ]
 

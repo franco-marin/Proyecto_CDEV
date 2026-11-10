@@ -27,6 +27,8 @@ const DISTANCIA_RAYO := 1000.0
 const MASCARA_CLICK := 1
 ## Si se hace click a menos de esta distancia de un animal, se lo elige como presa.
 const RADIO_CLICK_PRESA := 1.6
+## En la caza inversa, click a menos de esta distancia del cazador: perseguirlo.
+const RADIO_CLICK_CAZADOR := 3.0
 ## Convierte la sensibilidad del menú (1 a 10) en radianes por píxel de mouse.
 const FACTOR_SENSIBILIDAD := 0.0006
 ## Segundos que se ve un aviso (por ejemplo, "¡Un yacaré te mordió!").
@@ -114,6 +116,11 @@ var _proxima_manada := 0
 @onready var boton_reintentar: Button = $PantallaFinal/Fondo/Centro/Caja/BotonReintentar
 @onready var boton_menu: Button = $PantallaFinal/Fondo/Centro/Caja/BotonMenu
 @onready var concientizacion: Label = $PantallaFinal/Fondo/Centro/Caja/Concientizacion
+@onready var climax: Climax = $Climax
+## Sonido de la selva (pájaros) y del río. El del río se mueve por el cauce, al punto del
+## agua más cercano al yaguareté: así se oye más fuerte al acercarse a la orilla.
+@onready var sonido_ambiente: AudioStreamPlayer = $Ambiente
+@onready var sonido_rio: AudioStreamPlayer3D = $SonidoRio
 
 
 func _ready() -> void:
@@ -148,6 +155,7 @@ func _ready() -> void:
 	# 1) El río y la selva. 2) Calcular por dónde se puede caminar ("hornear" la
 	# navegación). Hay que esperar a que termine antes de soltar a los animales.
 	_crear_rio()
+	_empezar_sonidos()
 	_generar_bosque()
 	navegacion.bake_navigation_mesh(true)
 	await navegacion.bake_finished
@@ -166,12 +174,14 @@ func _process(delta: float) -> void:
 		camara.global_position = camara.global_position.lerp(objetivo, suavizado_camara * delta)
 		camara.look_at(jugador.global_position + Vector3.UP)
 	_actualizar_recorte_maleza()
+	_actualizar_sonido_rio()
 
 	if jugando and listo:
 		tiempo_jugado += delta
 		var cazador := _cazador_que_persigue()
-		aviso.visible = cazador != null
-		_actualizar_flecha(cazador)
+		# En el clímax los avisos los da climax.gd (y la flecha puede señalar a otro).
+		aviso.visible = cazador != null and not climax.activo()
+		_actualizar_flecha(climax.objetivo_de_la_flecha(cazador) if climax.activo() else cazador)
 		_actualizar_estado(delta)
 		if primera_persona:
 			aviso_comer.text = jugador.accion_disponible()
@@ -255,6 +265,12 @@ func _ordenar_movimiento(correr: bool) -> void:
 	var golpe := _raycast_desde_mouse()
 	if golpe.is_empty():
 		return
+	# Caza inversa: click sobre un cazador que huye (o cerca de él) para perseguirlo.
+	var cazador := climax.cazador_cerca_de(golpe.position, RADIO_CLICK_CAZADOR)
+	if cazador:
+		jugador.perseguir_a(cazador)
+		marcador.ocultar()
+		return
 	# ¿Se hizo click sobre un animal (vivo o abatido)? Entonces es una presa.
 	var presa := _presa_cerca_de(golpe.position, RADIO_CLICK_PRESA)
 	if presa:
@@ -295,6 +311,23 @@ func _aplicar_ambiente() -> void:
 	ambiente.fog_light_color = nivel.niebla
 	entorno.environment = ambiente
 	sol.light_energy = nivel.luz
+
+
+## Los dos sonidos se repiten sin fin. Mientras el menú tiene el juego en pausa, no suenan.
+## (climax.gd apaga el de la selva al empezar la persecución.)
+func _empezar_sonidos() -> void:
+	# Cada nivel tiene su propio sonido de selva (ver niveles.gd). Se carga solo el del
+	# nivel que se juega, porque los archivos son pesados.
+	sonido_ambiente.stream = load(nivel.sonido_ambiente)
+	sonido_ambiente.volume_db = nivel.volumen_ambiente
+	for sonido in [sonido_ambiente, sonido_rio]:
+		sonido.finished.connect(sonido.play)
+		sonido.play()
+
+
+func _actualizar_sonido_rio() -> void:
+	if rio != null:
+		sonido_rio.global_position = rio.punto_de_agua_cercano(jugador.global_position) + Vector3.UP * 0.3
 
 
 func _crear_rio() -> void:
@@ -463,6 +496,11 @@ func _crear_manada(tamano: int, centro := Vector3.INF) -> void:
 		pecari.global_position = punto + Vector3.UP * 0.2
 
 
+## La usa climax.gd para sumar cazadores en la persecución final.
+func crear_cazador_en(punto: Vector3) -> Node3D:
+	return _crear_en(ESCENA_CAZADOR, punto)
+
+
 func _crear_en(escena: PackedScene, punto: Vector3) -> Node3D:
 	var animal := escena.instantiate()
 	contenedor_animales.add_child(animal)
@@ -588,7 +626,7 @@ func _on_jugador_comio(total: int) -> void:
 		if Mundo.nivel < Niveles.CANTIDAD:
 			_terminar(true, "Comiste %d presas: superaste el nivel." % total)
 		else:
-			_terminar(true, "Sobreviviste a los tres niveles de la selva.")
+			climax.empezar()  # último nivel: en vez de ganar, empieza la persecución final
 
 
 func _on_jugador_murio(motivo: String) -> void:
@@ -613,6 +651,17 @@ func _on_boton_menu_pressed() -> void:
 
 func _actualizar_contador(total: int) -> void:
 	contador.text = "Presas: %d / %d" % [total, nivel.presas_para_ganar]
+
+
+## Pantalla final de la experiencia, después de la caza inversa (la llama climax.gd).
+func terminar_climax(titulo: String, texto: String, dato: String) -> void:
+	_terminar(true, texto)
+	titulo_final.text = titulo
+	motivo_final.text = texto
+	concientizacion.text = dato
+	concientizacion.visible = true
+	boton_reintentar.visible = false
+	boton_menu.text = "Volver al menú"
 
 
 ## "dato_real" solo se usa al perder: es el mensaje de concientización.

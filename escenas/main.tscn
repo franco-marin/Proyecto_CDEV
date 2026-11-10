@@ -5,6 +5,8 @@
 [ext_resource type="PackedScene" path="res://escenas/jugador.tscn" id="3_jugador"]
 [ext_resource type="PackedScene" path="res://escenas/marcador.tscn" id="4_marcador"]
 [ext_resource type="Script" path="res://scripts/menu_pausa.gd" id="5_menu_pausa"]
+[ext_resource type="Script" path="res://scripts/climax.gd" id="6_climax"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_rio.wav" id="8_rio"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 
@@ -129,6 +131,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 [node name="Marcador" parent="." instance=ExtResource("4_marcador")]
 
 [node name="Ambiente" type="AudioStreamPlayer" parent="."]
+
+[node name="SonidoRio" type="AudioStreamPlayer3D" parent="."]
+stream = ExtResource("8_rio")
+unit_size = 5.0
+max_distance = 35.0
+
+[node name="Climax" type="Node" parent="."]
+script = ExtResource("6_climax")
+
+[node name="MusicaPersecucion" type="AudioStreamPlayer" parent="Climax"]
+
+[node name="MusicaCazaInversa" type="AudioStreamPlayer" parent="Climax"]
 
 [node name="TimerEcosistema" type="Timer" parent="."]
 wait_time = 3.0
@@ -256,6 +270,29 @@ color = Color(1, 1, 1, 0.7)
 [node name="Triangulo" type="Polygon2D" parent="HUD/Flecha"]
 color = Color(1, 0.25, 0.2, 0.9)
 polygon = PackedVector2Array(0, -26, 20, 14, 0, 6, -20, 14)
+
+[node name="Anuncio" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 150.0
+offset_bottom = 230.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.6, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 52
+text = "¡Ahora cazás vos!"
+horizontal_alignment = 1
+
+[node name="Fundido" type="ColorRect" parent="HUD"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
 
 [node name="PantallaFinal" type="CanvasLayer" parent="."]
 process_mode = 3

@@ -34,12 +34,19 @@ extends Node3D
 var velocidad := 0.0
 ## Con true sube el rifle hasta el hombro (la IA lo activa mientras apunta).
 var apuntando := false
+## Caza inversa: soltó el rifle y huye agitando los brazos en alto.
+var asustado := false:
+	set(valor):
+		asustado = valor
+		for pieza in _rifle:
+			pieza.visible = not asustado
 
 var _torso: Node3D
 ## Brazos y rifle cuelgan de este pivote, a la altura de los hombros: así suben juntos al apuntar.
 var _armas: Node3D
 ## Golpe del retroceso al disparar: 1 justo al disparar, vuelve a 0 enseguida.
 var _retroceso := 0.0
+var _rifle: Array[Node3D] = []
 var _piernas: Array[Node3D] = []
 var _y_torso := 0.0
 var _fase := 0.0
@@ -58,6 +65,7 @@ func _reconstruir() -> void:
 		remove_child(hijo)
 		hijo.queue_free()
 	_piernas.clear()
+	_rifle.clear()
 
 	scale = Vector3.ONE * tamano
 	var piel := _material(color_piel)
@@ -103,8 +111,8 @@ func _reconstruir() -> void:
 		_caja(hombro, Vector3.ONE * 0.12, Vector3(0, -0.62, 0), piel)  # mano
 
 	# Rifle: culata de madera y caño negro, apuntando hacia adelante.
-	_caja(_armas, Vector3(0.08, 0.12, 0.4), Vector3(0, -0.15, 0.35), madera)
-	_caja(_armas, Vector3(0.05, 0.05, 0.6), Vector3(0, -0.13, 0.85), negro)
+	_rifle.append(_caja(_armas, Vector3(0.08, 0.12, 0.4), Vector3(0, -0.15, 0.35), madera))
+	_rifle.append(_caja(_armas, Vector3(0.05, 0.05, 0.6), Vector3(0, -0.13, 0.85), negro))
 
 
 ## Punta del caño en coordenadas del mundo: de ahí sale el fogonazo del disparo.
@@ -115,6 +123,11 @@ func punta_del_canon() -> Vector3:
 ## Sacudida del rifle hacia atrás y hacia arriba al disparar.
 func disparar() -> void:
 	_retroceso = 1.0
+
+
+## El arma se trabó: aprieta el gatillo y apenas se mueve.
+func trabar() -> void:
+	_retroceso = 0.25
 
 
 func _process(delta: float) -> void:
@@ -134,7 +147,9 @@ func _process(delta: float) -> void:
 	_armas.position.y = lerpf(_armas.position.y, altura_armas, 10.0 * delta)
 	_retroceso = move_toward(_retroceso, 0.0, delta * 6.0)
 	_armas.position.z = -0.1 * _retroceso
-	_armas.rotation.x = -0.35 * _retroceso
+	# Asustado, los brazos suben por encima de la cabeza y se agitan al correr.
+	var brazos_en_alto := (-1.5 + sin(_fase * 2.0) * 0.3) if asustado else 0.0
+	_armas.rotation.x = brazos_en_alto - 0.35 * _retroceso
 
 
 func _caja(padre: Node3D, medidas: Vector3, posicion: Vector3, material: Material) -> MeshInstance3D:

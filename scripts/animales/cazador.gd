@@ -6,6 +6,8 @@ extends AnimalIA
 ## Mientras lo persigue, si lo tiene a tiro se frena, apunta y dispara. Los tiros nunca
 ## lastiman: siempre pegan al costado del yaguareté (el SDD pide evitar la violencia
 ## explícita). Sirven para asustar. Solo se pierde si un cazador te alcanza.
+## En el clímax (ver climax.gd) cambia de modo: persigue sin tregua, cerca al yaguareté,
+## se le traba el arma y termina huyendo asustado.
 
 @export var vision_jugador := 15.0
 @export var distancia_rendirse_jugador := 20.0
@@ -26,6 +28,17 @@ extends AnimalIA
 @export var error_minimo := 1.2
 @export var error_maximo := 3.0
 
+@export_group("Clímax")
+## Velocidad corriendo en la persecución final (el yaguareté corre a 7).
+@export var velocidad_persecucion := 6.2
+## Formación de la persecución final: cuánto se abren hacia el costado los que siguen al
+## líder y cuántos metros van más atrás que él.
+@export var separacion_lateral := 6.0
+@export var atraso_respecto_del_lider := 3.0
+## Velocidad huyendo asustado en la caza inversa. Es mayor que la del yaguareté furioso
+## (8,4): no se lo puede alcanzar hasta que se cansa (ver cansarse()).
+@export var velocidad_huida := 9.0
+
 ## Capas de física (Proyecto > Configuración > Nombres de Capas): 1 = terreno, 2 = obstáculos.
 const MASCARA_TERRENO := 1
 const MASCARA_OBSTACULOS := 2
@@ -34,12 +47,28 @@ const DISTANCIA_AVISO_TIRO := 4.0
 
 ## Balas que le quedan en el cargador. Al llegar a 0 recarga (ver segundos_recarga).
 var balas := 0
+## Modos del clímax (los activa climax.gd con las funciones de abajo).
+var implacable := false
+var asustado := false
+## Formación de la persecución final (la reparte climax.gd): el líder (el más cercano) va
+## directo al yaguareté; el resto lo sigue un poco más atrás y abierto hacia un costado
+## ("lado_en_formacion": -1 o 1), como intentando rodearlo. "rango" 1 es el primero de
+## cada lado; los siguientes van más atrás.
+var lider: Node3D = null
+var lado_en_formacion := 0.0
+var rango_en_formacion := 0
 
 var _apuntando := 0.0
+## Mientras cerca al yaguareté: a qué distancia se queda (negativo = no está cercando).
+var _distancia_cerco := -1.0
+## Se queda mirando al yaguareté (al cercarlo y con el arma trabada).
+var _mirando_al_jugador := false
 var _espera_disparo := 0.0
 var _recargando := 0.0
 
 @onready var sonido_disparo: AudioStreamPlayer3D = $Disparo
+@onready var sonido_gatillo: AudioStreamPlayer3D = $Gatillo
+@onready var sonido_recarga: AudioStreamPlayer3D = $Recarga
 
 
 func _ready() -> void:
@@ -58,11 +87,24 @@ func _physics_process(delta: float) -> void:
 			balas = balas_por_cargador
 	if _apuntando > 0.0:
 		_apuntar(delta)
+	elif _mirando_al_jugador and not _moviendose:
+		var jugador := _jugador()
+		if jugador:
+			_girar_hacia(jugador.global_position, delta)
 
 
 func _pensar() -> void:
+	if asustado:
+		_huir_sin_parar()
+		return
+	if _distancia_cerco > 0.0:
+		_cercar()
+		return
 	# Mientras apunta no hace otra cosa: se queda quieto hasta disparar.
 	if _apuntando > 0.0:
+		return
+	if implacable:
+		_perseguir_sin_tregua()
 		return
 
 	# 1) Si ya persigue al jugador, no lo suelta hasta que se aleje demasiado.
@@ -99,6 +141,127 @@ func persigue_al_jugador() -> bool:
 	return estado == Estado.PERSEGUIR and es_valido(objetivo) and objetivo.is_in_group("jugador")
 
 
+# --- Clímax (lo controla climax.gd) ---------------------------------------------
+
+## Persecución final: va por el yaguareté sin rendirse y disparando. No puede atraparlo:
+## si llega a su lado se queda pegado a él (el jugador no pierde en el clímax).
+func perseguir_sin_tregua() -> void:
+	implacable = true
+	velocidad_correr = velocidad_persecucion
+
+
+## Acorralado: se acerca hasta "distancia" del yaguareté, se frena y se queda mirándolo.
+func cercar(distancia: float) -> void:
+	implacable = false
+	_distancia_cerco = distancia
+	_dejar_de_apuntar()
+
+
+## Le apunta al yaguareté... con el cargador vacío.
+func apuntar_sin_balas() -> void:
+	balas = 0
+	_recargando = 0.0
+	_detener()
+	_mirando_al_jugador = true
+	modelo.apuntando = true
+
+
+## Aprieta el gatillo y el arma no dispara.
+func gatillar_trabado() -> void:
+	modelo.trabar()
+	if sonido_gatillo.stream:
+		# Un poco distinto cada vez: al apretar rápido suena más desesperado.
+		sonido_gatillo.pitch_scale = randf_range(0.92, 1.12)
+		sonido_gatillo.play()
+
+
+## Caza inversa: suelta el rifle y huye del yaguareté con los brazos en alto.
+func huir_asustado() -> void:
+	asustado = true
+	implacable = false
+	_distancia_cerco = -1.0
+	_mirando_al_jugador = false
+	_dejar_de_apuntar()
+	modelo.asustado = true
+	velocidad_correr = velocidad_huida
+	_cambiar_estado(Estado.DEAMBULAR)  # para que huir_de() elija un destino nuevo enseguida
+
+
+## Ya no da más: sigue huyendo, pero al paso (así el yaguareté lo alcanza).
+func cansarse() -> void:
+	velocidad_correr = velocidad_caminar
+	_velocidad_actual = velocidad_caminar
+
+
+## Huye del yaguareté sin frenar nunca: antes de llegar a su destino ya elige el siguiente.
+## Si en ninguna dirección lejos del yaguareté hay salida (un borde, el río), escapa
+## hacia cualquier punto lejano de su lado del río.
+func _huir_sin_parar() -> void:
+	var jugador := _jugador()
+	if jugador == null:
+		return
+	if _moviendose and agente.distance_to_target() > 3.0:
+		return
+	_cambiar_estado(Estado.DEAMBULAR)  # así huir_de() elige un destino nuevo
+	huir_de(jugador)
+	if not _moviendose:
+		_ir_a(Mundo.punto_aleatorio_lejos_de(jugador.global_position, 20.0), velocidad_correr)
+
+
+func _perseguir_sin_tregua() -> void:
+	var jugador := _jugador()
+	if jugador == null:
+		return
+	perseguir(jugador)  # deja al jugador como objetivo (lo usan el aviso y la flecha del HUD)
+	if _puede_disparar_a(jugador) and Mundo.mismo_lado_del_rio(global_position, jugador.global_position):
+		_empezar_a_apuntar()
+	elif distancia_a(jugador) <= radio_ataque + 0.5:
+		_detener()  # pegado a él: no lo puede atrapar
+	else:
+		_seguir_en_formacion(jugador)
+
+
+## Si no es el líder, en vez de ir derecho al yaguareté (todos en fila) va a su puesto:
+## detrás del líder y abierto hacia su costado. Si ese puesto cae en el río o fuera del
+## mapa, va directo al yaguareté.
+func _seguir_en_formacion(jugador: Node3D) -> void:
+	if lado_en_formacion == 0.0 or lider == self or not is_instance_valid(lider):
+		return
+	var hacia := jugador.global_position - lider.global_position
+	hacia.y = 0.0
+	if hacia.length() < 0.5:
+		return
+	hacia = hacia.normalized()
+	var costado := Vector3(-hacia.z, 0, hacia.x)
+	var atras := Mundo.distancia_horizontal(lider.global_position, jugador.global_position) \
+		+ atraso_respecto_del_lider * rango_en_formacion
+	var abierto := separacion_lateral * lado_en_formacion * (1.0 + 0.5 * (rango_en_formacion - 1))
+	var puesto := Mundo.punto_navegable(jugador.global_position - hacia * atras + costado * abierto)
+	if _destino_permitido(puesto):
+		_ir_a(puesto, velocidad_correr)
+
+
+func _cercar() -> void:
+	var jugador := _jugador()
+	if jugador == null:
+		return
+	if distancia_a(jugador) > _distancia_cerco + 0.5:
+		perseguir(jugador)
+	else:
+		_detener()
+		_mirando_al_jugador = true
+
+
+func _jugador() -> Node3D:
+	var jugador := get_tree().get_first_node_in_group("jugador") as Node3D
+	return jugador if es_valido(jugador) else null
+
+
+func _girar_hacia(punto: Vector3, delta: float) -> void:
+	var hacia := punto - global_position
+	modelo.rotation.y = lerp_angle(modelo.rotation.y, atan2(hacia.x, hacia.z), 10.0 * delta)
+
+
 func _atrapar(presa) -> void:
 	if presa.is_in_group("jugador"):
 		presa.ser_capturado()
@@ -123,6 +286,10 @@ func _empezar_a_apuntar() -> void:
 	_apuntando = segundos_apuntando
 	_detener()
 	modelo.apuntando = true
+	# El click del martillo al amartillar el arma: avisa (también de oído) que viene un tiro.
+	if sonido_gatillo.stream:
+		sonido_gatillo.pitch_scale = 1.0
+		sonido_gatillo.play()
 
 
 ## Quieto, girando hacia el yaguareté. Al terminar el tiempo de apuntar, dispara.
@@ -130,8 +297,7 @@ func _apuntar(delta: float) -> void:
 	if not persigue_al_jugador():
 		_dejar_de_apuntar()
 		return
-	var hacia: Vector3 = objetivo.global_position - global_position
-	modelo.rotation.y = lerp_angle(modelo.rotation.y, atan2(hacia.x, hacia.z), 10.0 * delta)
+	_girar_hacia(objetivo.global_position, delta)
 	_apuntando -= delta
 	if _apuntando <= 0.0:
 		_disparar()
@@ -151,6 +317,9 @@ func _disparar() -> void:
 	_espera_disparo = segundos_entre_disparos
 	if balas <= 0:
 		_recargando = segundos_recarga
+		# Un instante después del último tiro, para que no quede tapado por el disparo.
+		if sonido_recarga.stream:
+			get_tree().create_timer(0.5, false).timeout.connect(sonido_recarga.play)
 
 	var canon: Vector3 = modelo.punta_del_canon()
 	var al_costado := Vector3.FORWARD.rotated(Vector3.UP, randf() * TAU) * randf_range(error_minimo, error_maximo)
@@ -172,7 +341,7 @@ func _disparar() -> void:
 	if sonido_disparo.stream:
 		sonido_disparo.pitch_scale = randf_range(0.9, 1.1)
 		sonido_disparo.play()
-	# Mientras no haya sonido, el aviso en pantalla deja claro que le dispararon.
+	# Además del sonido, un aviso en pantalla (por si se juega sin parlantes o con poco volumen).
 	if Mundo.distancia_horizontal(blanco, objetivo.global_position) <= DISTANCIA_AVISO_TIRO:
 		objetivo.mensaje.emit("¡Un disparo pasó cerca!")
 
