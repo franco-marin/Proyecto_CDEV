@@ -5,11 +5,12 @@ extends RefCounted
 ##   - Árboles del dosel: palo rosa, timbó y lapacho (20 a 30 m en la realidad).
 ##   - Estrato medio: palmera pindó y helecho arborescente chachí.
 ##   - Sotobosque (0 a 5 m): tacuaras, helechos, caraguatás y arbustos.
+##   - Árboles talados (deforestación): tocones y árboles caídos junto a su tocón.
 ## Cada planta se arma con piezas simples (cilindros, cajas, esferas) que se combinan
 ## en UNA sola malla con SurfaceTool. Cada especie tiene unas pocas variantes que se
 ## generan una sola vez y se reutilizan: todos los "palo rosa variante 2" comparten malla.
 
-enum Especie { PALO_ROSA, TIMBO, LAPACHO, PINDO, CHACHI, TACUARA, HELECHO, CARAGUATA, ARBUSTO }
+enum Especie { PALO_ROSA, TIMBO, LAPACHO, PINDO, CHACHI, TACUARA, HELECHO, CARAGUATA, ARBUSTO, TOCON, ARBOL_TALADO }
 
 const VARIANTES := 4
 const SHADER := preload("res://recursos/vegetacion.gdshader")
@@ -32,6 +33,7 @@ const COLORES := {
 	"caraguata": Color(0.34, 0.47, 0.21),
 	"caraguata_centro": Color(0.78, 0.15, 0.16),
 	"arbusto": Color(0.16, 0.35, 0.13),
+	"madera_cortada": Color(0.76, 0.62, 0.42),
 }
 
 ## Materiales del sotobosque: se recortan alrededor del jugador ("moverse entre la maleza").
@@ -52,6 +54,11 @@ static func planta(especie: Especie, variante: int) -> Dictionary:
 
 static func es_sotobosque(especie: Especie) -> bool:
 	return especie in [Especie.TACUARA, Especie.HELECHO, Especie.CARAGUATA, Especie.ARBUSTO]
+
+
+## Restos de la tala: no tienen copa, así que los pájaros no se posan en ellos.
+static func es_talado(especie: Especie) -> bool:
+	return especie in [Especie.TOCON, Especie.ARBOL_TALADO]
 
 
 static func material(nombre: String) -> ShaderMaterial:
@@ -89,6 +96,10 @@ static func _construir(especie: Especie, variante: int) -> Dictionary:
 			_caraguata(piezas, azar)
 		Especie.ARBUSTO:
 			_arbusto(piezas, azar)
+		Especie.TOCON:
+			_tocon(piezas, azar, datos)
+		Especie.ARBOL_TALADO:
+			_arbol_talado(piezas, azar, datos)
 	datos["malla"] = piezas.construir()
 	return datos
 
@@ -234,6 +245,54 @@ static func _arbusto(piezas: Piezas, azar: RandomNumberGenerator) -> void:
 			+ Vector3(0, azar.randf_range(0.6, 1.5), 0)
 		piezas.agregar(_esfera(), _escalado(centro, Vector3(radio, radio * 0.85, radio)),
 			"arbusto" if i % 3 != 2 else "helecho")
+
+
+## Tocón: lo que queda de un árbol del dosel después de la tala. Corteza con aletones
+## cortos, la cara del corte de madera clara y astillas alrededor de la base.
+static func _tocon(piezas: Piezas, azar: RandomNumberGenerator, datos: Dictionary) -> float:
+	var radio := azar.randf_range(0.45, 0.7)
+	var alto := azar.randf_range(0.5, 1.0)
+	datos["radio_tronco"] = radio + 0.15
+	datos["alto_colision"] = alto + 0.4
+	datos["posado"] = Vector3(0, alto, 0)
+
+	piezas.agregar(_cilindro(radio * 0.95, radio, alto), _en(Vector3(0, alto / 2.0, 0)), "corteza")
+	piezas.agregar(_cilindro(radio * 0.9, radio * 0.9, 0.04), _en(Vector3(0, alto + 0.01, 0)), "madera_cortada")
+	# Aletones cortos: la base del árbol que no se llevaron.
+	for i in 3:
+		var angulo := i * TAU / 3.0 + azar.randf_range(-0.4, 0.4)
+		var lado := Vector3(sin(angulo), 0, cos(angulo))
+		var base := Transform3D(Basis(Vector3.UP, angulo), lado * (radio + 0.2) + Vector3(0, 0.25, 0))
+		piezas.agregar(_caja(Vector3(0.12, 0.5, 0.5)), base.rotated_local(Vector3.RIGHT, -0.5), "corteza")
+	# Astillas sueltas en el suelo.
+	for i in azar.randi_range(3, 6):
+		var angulo := azar.randf() * TAU
+		var punto := Vector3(sin(angulo), 0.03, cos(angulo)) * azar.randf_range(radio + 0.3, radio + 1.2)
+		var astilla := Transform3D(Basis(Vector3.UP, azar.randf() * TAU), punto)
+		piezas.agregar(_caja(Vector3(0.08, 0.05, azar.randf_range(0.2, 0.45))), astilla, "madera_cortada")
+	return radio
+
+
+## Árbol talado: el tocón y, al lado, el tronco caído en el suelo, cortado y sin copa,
+## con algunos muñones de ramas. El tronco es un obstáculo (ver arbol.gd).
+static func _arbol_talado(piezas: Piezas, azar: RandomNumberGenerator, datos: Dictionary) -> void:
+	var radio := _tocon(piezas, azar, datos) * 0.85
+	var largo := azar.randf_range(4.0, 5.5)
+	var desde := Vector3(radio + 0.9, radio, 0)
+	var hasta := desde + Vector3(largo, 0, azar.randf_range(-0.6, 0.6))
+	piezas.agregar(_cilindro(radio * 0.75, radio, largo), _segmento(desde, hasta), "corteza")
+	# Las dos puntas del tronco muestran la madera cortada.
+	piezas.agregar(_cilindro(radio * 0.92, radio * 0.92, 0.04), _segmento(desde - Vector3(0.03, 0, 0), desde + Vector3(0.01, 0, 0)), "madera_cortada")
+	piezas.agregar(_cilindro(radio * 0.7, radio * 0.7, 0.04), _segmento(hasta - Vector3(0.01, 0, 0), hasta + Vector3(0.03, 0, 0)), "madera_cortada")
+	# Muñones de las ramas que cortaron.
+	for i in azar.randi_range(2, 3):
+		var base := desde.lerp(hasta, azar.randf_range(0.5, 0.95))
+		var punta := base + Vector3(azar.randf_range(-0.2, 0.4), radio + 0.5, azar.randf_range(-0.6, 0.6))
+		piezas.agregar(_cilindro(0.07, 0.11, base.distance_to(punta)), _segmento(base, punta), "corteza")
+	# Caja de colisión a lo largo del tronco (girada igual que él alrededor del eje vertical).
+	var direccion := hasta - desde
+	datos["caja"] = {"medidas": Vector3(direccion.length(), radio * 2.0, radio * 2.0),
+		"centro": (desde + hasta) / 2.0, "giro": atan2(-direccion.z, direccion.x)}
 
 
 ## Hoja larga y curva (de palmera, helecho o caraguatá): una cadena de tramos planos

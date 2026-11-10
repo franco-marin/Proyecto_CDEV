@@ -1,7 +1,8 @@
 class_name Niveles
 extends RefCounted
-## Configuración de cada nivel. Del 1 al 3 la selva se va degradando: menos maleza y
-## menos animales, más cazadores, basura y trampas, y el río cada vez más sucio.
+## Configuración de cada nivel. Del 1 al 3 la selva se va degradando: menos árboles,
+## maleza, animales y pájaros, más árboles talados, cazadores, basura y trampas, y el río
+## cada vez más sucio.
 
 const CANTIDAD := 3
 
@@ -9,6 +10,14 @@ const DATOS := [
 	{
 		"nombre": "Nivel 1: Selva intacta",
 		"presas_para_ganar": 3,
+		# Selva: árboles del dosel, palmeras pindó, helechos chachí y árboles fuera del
+		# límite del mapa. "talados" son tocones y árboles caídos (la deforestación).
+		"arboles_grandes": 155,
+		"palmeras": 38,
+		"helechos_arborescentes": 70,
+		"arboles_decorativos": 80,
+		"talados": 0,
+		"pajaros": 14,
 		"sotobosque": 1400,
 		"frutas": 28,
 		"termiteros": 18,
@@ -29,6 +38,12 @@ const DATOS := [
 	{
 		"nombre": "Nivel 2: Selva amenazada",
 		"presas_para_ganar": 3,
+		"arboles_grandes": 115,
+		"palmeras": 28,
+		"helechos_arborescentes": 50,
+		"arboles_decorativos": 60,
+		"talados": 35,
+		"pajaros": 6,
 		"sotobosque": 900,
 		"frutas": 20,
 		"termiteros": 12,
@@ -48,6 +63,12 @@ const DATOS := [
 	{
 		"nombre": "Nivel 3: Selva degradada",
 		"presas_para_ganar": 3,
+		"arboles_grandes": 70,
+		"palmeras": 16,
+		"helechos_arborescentes": 28,
+		"arboles_decorativos": 40,
+		"talados": 80,
+		"pajaros": 2,
 		"sotobosque": 550,
 		"frutas": 14,
 		"termiteros": 8,

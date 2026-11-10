@@ -51,11 +51,8 @@ const AYUDA_TERCERA := "Click derecho: caminar  ·  Click derecho sobre un anima
 const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  ·  Click izquierdo: zarpazo  ·  E: comer una presa abatida  ·  Esc: pausa"
 
 @export_group("Selva")
-## Árboles del dosel (palo rosa, timbó, lapacho): sus copas tapan el cielo.
-@export var cantidad_arboles_grandes := 155
-@export var cantidad_palmeras := 38
-@export var cantidad_helechos_arborescentes := 70
-@export var cantidad_arboles_decorativos := 80
+## Las cantidades de árboles, palmeras, helechos, árboles talados y pájaros dependen del
+## nivel (ver niveles.gd); acá queda solo la maleza fuera de los límites del mapa.
 @export var cantidad_sotobosque_decorativo := 220
 
 @export_group("Recorte de la maleza")
@@ -63,9 +60,6 @@ const AYUDA_PRIMERA := "WASD: caminar  ·  Shift + W: correr  ·  Mouse: mirar  
 @export var radio_maleza := 2.6
 ## En tercera persona: radio del círculo en pantalla (proporción del alto de la pantalla).
 @export var radio_circulo_pantalla := 0.2
-
-@export_group("Ecosistema")
-@export var cantidad_pajaros := 14
 
 @export_group("Cámara")
 ## La cámara va por debajo del dosel (las copas empiezan a unos 10 m).
@@ -320,15 +314,18 @@ func _generar_bosque() -> void:
 	var troncos: Array[Vector3] = []
 	var limite := Mundo.MITAD_MAPA - 1.5
 	Mundo.limpiar_cobertura()
-	_plantar(cantidad_arboles_grandes, [E.PALO_ROSA, E.PALO_ROSA, E.TIMBO, E.LAPACHO], 5.5, limite, troncos, contenedor_arboles)
-	_plantar(cantidad_palmeras, [E.PINDO], 3.0, limite, troncos, contenedor_arboles)
-	_plantar(cantidad_helechos_arborescentes, [E.CHACHI], 2.5, limite, troncos, contenedor_arboles)
+	_plantar(nivel.arboles_grandes, [E.PALO_ROSA, E.PALO_ROSA, E.TIMBO, E.LAPACHO], 5.5, limite, troncos, contenedor_arboles)
+	_plantar(nivel.palmeras, [E.PINDO], 3.0, limite, troncos, contenedor_arboles)
+	_plantar(nivel.helechos_arborescentes, [E.CHACHI], 2.5, limite, troncos, contenedor_arboles)
+	# La deforestación: tocones y árboles caídos donde antes había selva. Necesitan lugar
+	# (el tronco caído llega hasta 7 m del tocón) y, como los árboles, son obstáculos.
+	_plantar(nivel.talados, [E.TOCON, E.TOCON, E.ARBOL_TALADO], 6.0, limite, troncos, contenedor_arboles)
 	var plantas_bajas := [E.ARBUSTO, E.ARBUSTO, E.ARBUSTO, E.HELECHO, E.HELECHO, E.HELECHO, E.CARAGUATA, E.CARAGUATA, E.TACUARA]
 	_plantar(nivel.sotobosque, plantas_bajas, 1.0, limite, troncos, contenedor_sotobosque)
 
 	# Selva decorativa fuera de los límites, para que el bosque no "termine" de golpe.
 	var afuera: Array[Vector3] = []
-	_plantar(cantidad_arboles_decorativos, [E.PALO_ROSA, E.TIMBO, E.LAPACHO, E.PINDO], 6.0, 85.0, afuera, contenedor_decorativos, Mundo.MITAD_MAPA + 4.0)
+	_plantar(nivel.arboles_decorativos, [E.PALO_ROSA, E.TIMBO, E.LAPACHO, E.PINDO], 6.0, 85.0, afuera, contenedor_decorativos, Mundo.MITAD_MAPA + 4.0)
 	_plantar(cantidad_sotobosque_decorativo, plantas_bajas, 1.5, 75.0, afuera, contenedor_sotobosque, Mundo.MITAD_MAPA + 3.0)
 
 
@@ -350,13 +347,16 @@ func _plantar(cantidad: int, especies: Array, separacion: float, limite: float,
 			continue
 		if _muy_cerca(punto, ocupados, separacion):
 			continue
+		var giro := randf() * TAU
+		if especie == FabricaFlora.Especie.ARBOL_TALADO and not _lugar_para_tronco_caido(punto, giro, limite, ocupados):
+			continue
 		if not sotobosque:
 			ocupados.append(punto)  # el sotobosque no ocupa lugar: puede crecer junto a otro
 		var planta := (ESCENA_ARBUSTO if sotobosque else ESCENA_ARBOL).instantiate()
 		planta.especie = especie
 		planta.variante = randi() % FabricaFlora.VARIANTES
 		planta.position = punto
-		planta.rotation.y = randf() * TAU
+		planta.rotation.y = giro
 		if sotobosque:
 			planta.scale = Vector3.ONE * randf_range(0.8, 1.3)
 			planta.set_instance_shader_parameter("tinte", Vector3.ONE * randf_range(0.8, 1.15))
@@ -365,6 +365,17 @@ func _plantar(cantidad: int, especies: Array, separacion: float, limite: float,
 			planta.get_node("Malla").set_instance_shader_parameter("tinte", Vector3.ONE * randf_range(0.85, 1.1))
 		contenedor.add_child(planta)
 		plantadas += 1
+
+
+## El tronco de un árbol talado queda tendido hasta 7 m del tocón (hacia +X, girado
+## "giro"): no tiene que caer en el río, salir del mapa ni atravesar otros troncos.
+func _lugar_para_tronco_caido(tocon: Vector3, giro: float, limite: float, ocupados: Array[Vector3]) -> bool:
+	for distancia in [2.5, 4.5, 7.0]:
+		var punto := tocon + Vector3(distancia, 0, 0).rotated(Vector3.UP, giro)
+		if maxf(absf(punto.x), absf(punto.z)) > limite or rio.en_agua(punto, 1.0) \
+				or _muy_cerca(punto, ocupados, 1.5):
+			return false
+	return true
 
 
 ## Pone frutas, termiteros, basura, trampas, animales, cazadores y pájaros según el nivel.
@@ -390,7 +401,7 @@ func _poblar_nivel() -> void:
 				_crear_animal(especie)
 	for i in nivel.cazadores:
 		_crear_en(ESCENA_CAZADOR, Mundo.punto_aleatorio_lejos_de(jugador.global_position, 30.0))
-	for i in cantidad_pajaros:
+	for i in nivel.pajaros:
 		_crear_pajaro()
 
 

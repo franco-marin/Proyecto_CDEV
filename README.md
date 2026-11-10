@@ -15,9 +15,9 @@ El mapa se genera al azar en cada partida, siempre con un río.
 
 | Nivel | Selva | Peligros |
 |-------|-------|----------|
-| 1: Selva intacta | Mucha maleza y animales, río celeste | Yacarés en el río |
-| 2: Selva amenazada | Menos maleza y animales, río verdoso | 2 cazadores, basura (te enferma si pasás a menos de 1 m) |
-| 3: Selva degradada | Poca maleza y pocos animales, río sucio | 5 cazadores, más basura y trampas (10 s sin poder correr) |
+| 1: Selva intacta | Selva densa, mucha maleza, animales y pájaros, río celeste | Yacarés en el río |
+| 2: Selva amenazada | Menos árboles y maleza, primeros tocones y árboles talados, menos animales y pájaros, río verdoso | 2 cazadores, basura (te enferma si pasás a menos de 1 m) |
+| 3: Selva degradada | Selva rala con muchos árboles talados, poca maleza, pocos animales y casi sin pájaros, río sucio | 5 cazadores, más basura y trampas (10 s sin poder correr) |
 
 ## Cómo abrirlo
 
