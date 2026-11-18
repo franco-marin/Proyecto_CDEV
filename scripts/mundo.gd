@@ -28,6 +28,62 @@ var rio: Rio = null
 var _cobertura := {}
 
 
+## Avisa a los menús cuando se cambia entre ventana y pantalla completa (por ejemplo con F11).
+signal pantalla_completa_cambiada(activa: bool)
+## Se pidió pantalla completa pero no se puede (el juego corre dentro del editor).
+signal pantalla_completa_no_disponible
+
+## Cuando se prueba con F5, Godot 4.4+ ejecuta el juego dentro de la pestaña "Juego" del
+## editor, y ahí no se puede poner en pantalla completa.
+const AVISO_EDITOR := "En el editor el juego corre dentro de la pestaña \"Juego\" y no puede ir a pantalla completa. Desactivá \"Incrustar juego en la próxima ejecución\" en esa pestaña (o probalo exportado)."
+
+
+func _ready() -> void:
+	# Siempre activo, para que F11 funcione también con el juego en pausa.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("pantalla_completa"):
+		poner_pantalla_completa(not esta_en_pantalla_completa())
+		get_viewport().set_input_as_handled()
+
+
+func pantalla_completa_disponible() -> bool:
+	return not Engine.is_embedded_in_editor()
+
+
+## Prepara una casilla "Pantalla completa" de un menú: muestra el modo actual, lo cambia
+## al marcarla y se actualiza si se usa F11. Dentro del editor queda desactivada y explica por qué.
+func preparar_casilla_pantalla_completa(casilla: CheckButton) -> void:
+	casilla.button_pressed = esta_en_pantalla_completa()
+	if not pantalla_completa_disponible():
+		casilla.disabled = true
+		casilla.text = "Pantalla completa (no disponible dentro del editor)"
+		casilla.tooltip_text = AVISO_EDITOR
+		return
+	casilla.toggled.connect(poner_pantalla_completa)
+	pantalla_completa_cambiada.connect(casilla.set_pressed_no_signal)
+
+
+func esta_en_pantalla_completa() -> bool:
+	var modo_ventana := DisplayServer.window_get_mode()
+	return modo_ventana == DisplayServer.WINDOW_MODE_FULLSCREEN \
+		or modo_ventana == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+
+
+## Cambia entre ventana y pantalla completa (sin bordes: ideal para grabar).
+func poner_pantalla_completa(activar: bool) -> void:
+	if activar == esta_en_pantalla_completa():
+		return
+	if not pantalla_completa_disponible():
+		push_warning(AVISO_EDITOR)
+		pantalla_completa_no_disponible.emit()
+		return
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if activar else DisplayServer.WINDOW_MODE_WINDOWED)
+	pantalla_completa_cambiada.emit(activar)
+
+
 ## Recarga el nivel. Con volver_al_menu = true se vuelve a elegir el modo de juego.
 func reiniciar(volver_al_menu: bool) -> void:
 	mostrar_menu = volver_al_menu
