@@ -244,8 +244,6 @@ func atrapar_en_trampa(segundos: float) -> void:
 ## Textos para el HUD con lo que le está pasando ahora.
 func estados_activos() -> Array[String]:
 	var estados: Array[String] = []
-	if oculto:
-		estados.append("Oculto en la maleza")
 	if nadando:
 		estados.append("Nadando")
 	if segundos_sin_correr > 0.0:

@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://escenas/jugador.tscn" id="3_jugador"]
 [ext_resource type="PackedScene" path="res://escenas/marcador.tscn" id="4_marcador"]
 [ext_resource type="Script" path="res://scripts/menu_pausa.gd" id="5_menu_pausa"]
+[ext_resource type="Script" path="res://scripts/icono_ojo.gd" id="6_icono_ojo"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 
@@ -156,6 +157,14 @@ theme_override_styles/background = SubResource("BarraFondo")
 theme_override_styles/fill = SubResource("BarraRelleno")
 value = 100.0
 show_percentage = false
+
+[node name="Ojo" type="Control" parent="HUD"]
+offset_left = 326.0
+offset_top = 28.0
+offset_right = 386.0
+offset_bottom = 76.0
+mouse_filter = 2
+script = ExtResource("6_icono_ojo")
 
 [node name="Contador" type="Label" parent="HUD"]
 offset_left = 16.0
