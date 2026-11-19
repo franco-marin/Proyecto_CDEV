@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/menu_pausa.gd" id="5_menu_pausa"]
 [ext_resource type="Script" path="res://scripts/climax.gd" id="6_climax"]
 [ext_resource type="AudioStream" path="res://sonidos/sonido_rio.wav" id="8_rio"]
+[ext_resource type="Script" path="res://scripts/icono_ojo.gd" id="6_icono_ojo"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 
@@ -170,6 +171,14 @@ theme_override_styles/background = SubResource("BarraFondo")
 theme_override_styles/fill = SubResource("BarraRelleno")
 value = 100.0
 show_percentage = false
+
+[node name="Ojo" type="Control" parent="HUD"]
+offset_left = 326.0
+offset_top = 28.0
+offset_right = 386.0
+offset_bottom = 76.0
+mouse_filter = 2
+script = ExtResource("6_icono_ojo")
 
 [node name="Contador" type="Label" parent="HUD"]
 offset_left = 16.0
@@ -493,6 +502,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "5"
 
+[node name="PantallaCompleta" type="CheckButton" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 16
+text = "Pantalla completa (F11)"
+
 [node name="MenuPausa" type="CanvasLayer" parent="."]
 process_mode = 3
 layer = 4
@@ -530,6 +545,12 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Continuar"
+
+[node name="PantallaCompleta" type="CheckButton" parent="MenuPausa/Fondo/Centro/Caja"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 18
+text = "Pantalla completa (F11)"
 
 [node name="BotonMenu" type="Button" parent="MenuPausa/Fondo/Centro/Caja"]
 custom_minimum_size = Vector2(260, 50)

@@ -112,10 +112,12 @@ var _proxima_manada := 0
 @onready var aviso_comer: Label = $HUD/Comer
 @onready var mira: ColorRect = $HUD/Mira
 @onready var flecha: Node2D = $HUD/Flecha
+@onready var ojo: Control = $HUD/Ojo
 @onready var menu_inicio: CanvasLayer = $MenuInicio
 @onready var botones_nivel: HBoxContainer = $MenuInicio/Fondo/Centro/Caja/Niveles/Botones
 @onready var deslizador_sensibilidad: HSlider = $MenuInicio/Fondo/Centro/Caja/Sensibilidad/Deslizador
 @onready var valor_sensibilidad: Label = $MenuInicio/Fondo/Centro/Caja/Sensibilidad/Valor
+@onready var casilla_pantalla_completa: CheckButton = $MenuInicio/Fondo/Centro/Caja/PantallaCompleta
 @onready var menu_pausa: CanvasLayer = $MenuPausa
 @onready var pantalla_final: CanvasLayer = $PantallaFinal
 @onready var titulo_final: Label = $PantallaFinal/Fondo/Centro/Caja/Titulo
@@ -138,6 +140,7 @@ func _ready() -> void:
 	aviso_comer.visible = false
 	mira.visible = false
 	flecha.visible = false
+	ojo.visible = false
 	etiqueta_estado.text = ""
 	etiqueta_nivel.text = nivel.nombre
 	marcador.ocultar()
@@ -153,6 +156,9 @@ func _ready() -> void:
 	deslizador_sensibilidad.value = Mundo.sensibilidad
 	valor_sensibilidad.text = str(Mundo.sensibilidad)
 	_preparar_botones_de_nivel()
+	Mundo.preparar_casilla_pantalla_completa(casilla_pantalla_completa)
+	# Si se aprieta F11 dentro del editor, avisar en pantalla por qué no pasa nada.
+	Mundo.pantalla_completa_no_disponible.connect(_on_jugador_mensaje.bind("Pantalla completa: no disponible dentro del editor (mirá la pestaña \"Juego\")"))
 	if Mundo.mostrar_menu:
 		menu_inicio.visible = true
 		get_tree().paused = true
@@ -163,6 +169,8 @@ func _ready() -> void:
 	# 1) El río y la selva. 2) Calcular por dónde se puede caminar ("hornear" la
 	# navegación). Hay que esperar a que termine antes de soltar a los animales.
 	_crear_rio()
+	_decorar_orillas()
+	_cubrir_de_pasto()
 	_empezar_sonidos()
 	_generar_bosque()
 	navegacion.bake_navigation_mesh(true)
@@ -191,6 +199,8 @@ func _process(delta: float) -> void:
 		aviso.visible = cazador != null and not climax.activo()
 		_actualizar_flecha(climax.objetivo_de_la_flecha(cazador) if climax.activo() else cazador)
 		_actualizar_estado(delta)
+		# Ojo cerrado: está escondido en la maleza y cuesta verlo.
+		ojo.cerrado = jugador.oculto
 		if primera_persona:
 			aviso_comer.text = jugador.accion_disponible()
 			aviso_comer.visible = aviso_comer.text != ""
@@ -226,6 +236,7 @@ func _empezar_partida(modo: int) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		ayuda.text = AYUDA_TERCERA
 	mira.visible = primera_persona
+	ojo.visible = true
 
 	jugando = true
 	menu_pausa.habilitado = true
@@ -332,6 +343,11 @@ func _aplicar_ambiente() -> void:
 ## Los dos sonidos se repiten sin fin. Mientras el menú tiene el juego en pausa, no suenan.
 ## (climax.gd apaga el de la selva al empezar la persecución.)
 func _empezar_sonidos() -> void:
+	# Sin pantalla (el pipeline de GitHub y las pruebas automáticas) no hay audio de verdad:
+	# el driver de audio falso no llega a soltar los sonidos en bucle al cerrar y Godot
+	# avisa "resources still in use at exit", que el pipeline toma como error.
+	if DisplayServer.get_name() == "headless":
+		return
 	# Cada nivel tiene su propio sonido de selva (ver niveles.gd). Se carga solo el del
 	# nivel que se juega, porque los archivos son pesados.
 	sonido_ambiente.stream = load(nivel.sonido_ambiente)
@@ -352,6 +368,57 @@ func _crear_rio() -> void:
 	add_child(rio)
 	rio.generar(Mundo.MITAD_MAPA, nivel.rio_color, nivel.rio_turbidez, nivel.rio_espuma, nivel.botellas_en_rio)
 	Mundo.rio = rio
+
+
+## Pasto corto en todo el suelo (también un poco más allá de los límites), menos el río
+## y su orilla.
+func _cubrir_de_pasto() -> void:
+	var pasto := Pasto.new()
+	pasto.name = "Pasto"
+	add_child(pasto)
+	pasto.generar(Mundo.MITAD_MAPA + 20.0, rio)
+
+
+## Piedras a lo largo de las orillas (algunas quedan dentro del agua). Son decoración:
+## no tienen colisión ni esconden al yaguareté. Se dibujan con MultiMesh: una sola
+## instancia dibuja todas las copias de una malla.
+func _decorar_orillas() -> void:
+	var E := FabricaFlora.Especie
+	var piedras := {}
+	for i in rio.puntos.size():
+		var centro: Vector3 = rio.puntos[i]
+		if absf(centro.x) > Mundo.MITAD_MAPA + 20.0 or absf(centro.z) > Mundo.MITAD_MAPA + 20.0:
+			continue
+		var normal := rio.normal_en(i)
+		var medio: float = rio.anchos[i] / 2.0
+		for lado in [-1.0, 1.0]:
+			if randf() < 0.35:
+				var punto: Vector3 = centro + normal * lado * (medio + randf_range(-1.5, 1.2))
+				_agregar_copia(piedras, punto, randf_range(0.7, 1.6))
+	for variante in piedras:
+		_multimalla(FabricaFlora.planta(E.PIEDRA, variante).malla, piedras[variante], true)
+
+
+## Agrega una copia (en una variante al azar) con un giro y un tamaño al azar.
+func _agregar_copia(copias: Dictionary, punto: Vector3, escala: float) -> void:
+	var variante := randi() % FabricaFlora.VARIANTES
+	if not copias.has(variante):
+		copias[variante] = []
+	copias[variante].append(Transform3D(Basis(Vector3.UP, randf() * TAU).scaled(Vector3.ONE * escala), punto))
+
+
+func _multimalla(malla: Mesh, transformaciones: Array, con_sombra: bool) -> void:
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.mesh = malla
+	multi.instance_count = transformaciones.size()
+	for i in transformaciones.size():
+		multi.set_instance_transform(i, transformaciones[i])
+	var instancia := MultiMeshInstance3D.new()
+	instancia.multimesh = multi
+	instancia.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if con_sombra \
+		else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	rio.add_child(instancia)
 
 
 ## Genera la selva por estratos, como en la selva paranaense: primero los árboles
