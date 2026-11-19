@@ -19,6 +19,8 @@ var sensibilidad := 5.0
 ## Nivel que se está jugando (1 a Niveles.CANTIDAD) y el más alto que se desbloqueó.
 var nivel := 1
 var nivel_desbloqueado := 1
+## Modo admin (escondido): se activa con P en el menú de inicio y deja elegir cualquier nivel.
+var modo_admin := false
 
 ## El río del nivel actual (lo crea main.gd). Es null mientras no exista.
 var rio: Rio = null
@@ -32,6 +34,8 @@ var _cobertura := {}
 signal pantalla_completa_cambiada(activa: bool)
 ## Se pidió pantalla completa pero no se puede (el juego corre dentro del editor).
 signal pantalla_completa_no_disponible
+## Se activó o desactivó el modo admin (tecla P en el menú de inicio).
+signal modo_admin_cambiado(activo: bool)
 
 ## Cuando se prueba con F5, Godot 4.4+ ejecuta el juego dentro de la pestaña "Juego" del
 ## editor, y ahí no se puede poner en pantalla completa.
@@ -39,14 +43,46 @@ const AVISO_EDITOR := "En el editor el juego corre dentro de la pestaña \"Juego
 
 
 func _ready() -> void:
-	# Siempre activo, para que F11 funcione también con el juego en pausa.
+	# Siempre activo, para que F11 y P funcionen también con el juego en pausa.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Cerrar la ventana no sale de golpe: pasa por cerrar_juego(), que primero detiene todo.
+	get_tree().set_auto_accept_quit(false)
+
+
+func _notification(que: int) -> void:
+	if que == NOTIFICATION_WM_CLOSE_REQUEST:
+		cerrar_juego()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pantalla_completa"):
 		poner_pantalla_completa(not esta_en_pantalla_completa())
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("modo_admin") and mostrar_menu:
+		# Solo en el menú de inicio (mostrar_menu es true mientras se ve ese menú).
+		modo_admin = not modo_admin
+		modo_admin_cambiado.emit(modo_admin)
+		get_viewport().set_input_as_handled()
+
+
+var _cerrando := false
+
+
+## Cierra el juego en orden: pausa todo, detiene todos los sonidos y espera unos frames
+## para que el audio los suelte antes de salir. Si se cerrara con sonidos sonando, Godot
+## avisaría "resources still in use at exit".
+func cerrar_juego() -> void:
+	if _cerrando:
+		return
+	_cerrando = true
+	get_tree().paused = true
+	for tipo in ["AudioStreamPlayer", "AudioStreamPlayer2D", "AudioStreamPlayer3D"]:
+		for reproductor in get_tree().root.find_children("*", tipo, true, false):
+			reproductor.stop()
+			reproductor.stream = null
+	for i in 3:
+		await get_tree().process_frame
+	get_tree().quit()
 
 
 func pantalla_completa_disponible() -> bool:

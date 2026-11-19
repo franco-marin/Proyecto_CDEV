@@ -115,6 +115,7 @@ var _proxima_manada := 0
 @onready var ojo: Control = $HUD/Ojo
 @onready var menu_inicio: CanvasLayer = $MenuInicio
 @onready var botones_nivel: HBoxContainer = $MenuInicio/Fondo/Centro/Caja/Niveles/Botones
+@onready var cartel_admin: Label = $MenuInicio/CartelAdmin
 @onready var deslizador_sensibilidad: HSlider = $MenuInicio/Fondo/Centro/Caja/Sensibilidad/Deslizador
 @onready var valor_sensibilidad: Label = $MenuInicio/Fondo/Centro/Caja/Sensibilidad/Valor
 @onready var casilla_pantalla_completa: CheckButton = $MenuInicio/Fondo/Centro/Caja/PantallaCompleta
@@ -243,14 +244,27 @@ func _empezar_partida(modo: int) -> void:
 	get_tree().paused = false
 
 
-## Botones "Nivel 1/2/3" del menú: solo se pueden elegir los niveles desbloqueados.
+## Botones "Nivel 1/2/3" del menú: solo se pueden elegir los niveles desbloqueados,
+## salvo en el modo admin (escondido: tecla P en el menú), que habilita los tres.
 func _preparar_botones_de_nivel() -> void:
 	for i in botones_nivel.get_child_count():
 		var boton := botones_nivel.get_child(i) as Button
-		var numero := i + 1
-		boton.disabled = numero > Mundo.nivel_desbloqueado
-		boton.button_pressed = numero == Mundo.nivel
-		boton.pressed.connect(_elegir_nivel.bind(numero))
+		boton.button_pressed = i + 1 == Mundo.nivel
+		boton.pressed.connect(_elegir_nivel.bind(i + 1))
+	_actualizar_botones_de_nivel()
+	cartel_admin.visible = Mundo.modo_admin
+	Mundo.modo_admin_cambiado.connect(_on_modo_admin_cambiado)
+
+
+func _actualizar_botones_de_nivel() -> void:
+	for i in botones_nivel.get_child_count():
+		var boton := botones_nivel.get_child(i) as Button
+		boton.disabled = not Mundo.modo_admin and i + 1 > Mundo.nivel_desbloqueado
+
+
+func _on_modo_admin_cambiado(activo: bool) -> void:
+	cartel_admin.visible = activo
+	_actualizar_botones_de_nivel()
 
 
 ## Elegir otro nivel en el menú vuelve a generar el mundo con esa configuración.
