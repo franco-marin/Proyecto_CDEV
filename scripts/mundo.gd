@@ -7,6 +7,9 @@ enum ModoCamara { TERCERA_PERSONA, PRIMERA_PERSONA }
 
 ## Mitad del lado del área jugable: el bosque mide 2 × MITAD_MAPA metros de lado.
 const MITAD_MAPA := 60.0
+## Mitad del ancho (x) y del largo (z) del área jugable del nivel actual. Casi siempre es un
+## cuadrado de MITAD_MAPA; en el nivel 4 (el pasillo) es angosta y larga. La fija main.gd.
+var limite := Vector2(MITAD_MAPA, MITAD_MAPA)
 ## Tamaño de las celdas de la grilla que guarda dónde hay maleza (para la cobertura).
 const TAMANO_CELDA := 4.0
 
@@ -179,9 +182,9 @@ func _celda(punto: Vector3) -> Vector2i:
 ## Recorta un punto para que quede dentro del área jugable.
 func limitar(punto: Vector3) -> Vector3:
 	return Vector3(
-		clampf(punto.x, -MITAD_MAPA, MITAD_MAPA),
+		clampf(punto.x, -limite.x, limite.x),
 		punto.y,
-		clampf(punto.z, -MITAD_MAPA, MITAD_MAPA))
+		clampf(punto.z, -limite.y, limite.y))
 
 
 ## Devuelve el punto caminable (sobre la malla de navegación) más cercano.
@@ -203,7 +206,7 @@ func punto_aleatorio_en_mapa() -> Vector3:
 	var punto := Vector3.ZERO
 	for intento in 20:
 		punto = punto_navegable(Vector3(
-			randf_range(-MITAD_MAPA, MITAD_MAPA), 0, randf_range(-MITAD_MAPA, MITAD_MAPA)))
+			randf_range(-limite.x, limite.x), 0, randf_range(-limite.y, limite.y)))
 		if not en_agua(punto, 1.0):
 			break
 	return punto

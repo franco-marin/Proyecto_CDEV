@@ -461,6 +461,13 @@ toggle_mode = true
 button_group = SubResource("GrupoNiveles")
 text = "3: Degradada"
 
+[node name="Nivel4" type="Button" parent="MenuInicio/Fondo/Centro/Caja/Niveles/Botones"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("GrupoNiveles")
+text = "4: La persecución"
+
 [node name="Espacio" type="Control" parent="MenuInicio/Fondo/Centro/Caja"]
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
