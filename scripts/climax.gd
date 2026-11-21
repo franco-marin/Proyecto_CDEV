@@ -1,17 +1,26 @@
 class_name Climax
 extends Node
-## El final de la experiencia (SDD: fases "Persecución" y "Caza inversa"). Arranca cuando
-## el yaguareté come la última presa del nivel 3:
-##   1) Persecución: 3 cazadores lo persiguen sin rendirse y disparando; ni cruzar el río
-##      ni alejarse lo salva. Solo puede huir: no caza, no come y el hambre no baja.
+## El final de la experiencia (SDD: fases "Persecución" y "Caza inversa"). Es el nivel 4:
+## un pasillo lineal (ver pasillo.gd). La barra de hambre está llena y no baja.
+##   0) Presentación: el yaguareté, quieto, ve llegar a un cazador por el sendero; se le
+##      suman dos más, uno a cada lado, y recién ahí empiezan a disparar y a seguirlo.
+##   1) Persecución: hay que dar media vuelta y correr por el pasillo. Los cazadores van
+##      cada vez más rápido (en 10 s ya lo alcanzan). Si a los 20 s todavía no lo alcanzaron,
+##      aparece uno justo detrás de él (fuera de cámara) y lo alcanza.
 ##   2) Acorralado: lo rodean y el más cercano le apunta... pero el arma está trabada.
-##   3) Caza inversa: todos sueltan el rifle y huyen sin parar, más rápido que el
-##      yaguareté. Cuando pasa el tiempo se cansan y el yaguareté los puede alcanzar.
+##   3) Caza inversa: todos sueltan el rifle y huyen por el pasillo, al principio tan rápido
+##      como el yaguareté; en 7 segundos se van frenando de a poco hasta que los alcanza.
 ##   4) Final en suspenso: justo antes de alcanzar a cualquiera de ellos, la pantalla se
 ##      funde a negro.
 ## Durante todo el clímax el jugador no puede perder: todos llegan a ver la caza inversa.
 
-enum Fase { INACTIVO, PERSECUCION, ACORRALADO, CAZA_INVERSA, FINAL }
+enum Fase { INACTIVO, PRESENTACION, PERSECUCION, ACORRALADO, CAZA_INVERSA, FINAL }
+
+## Cámara de tercera persona en el pasillo (desplazamiento respecto del yaguareté).
+## Mirando hacia la entrada (por donde vienen los cazadores) y mirando hacia el fondo
+## (hacia donde se escapa).
+const CAMARA_HACIA_LA_ENTRADA := Vector3(0, 3.4, -6.0)
+const CAMARA_HACIA_EL_FONDO := Vector3(0, 6.5, 8)
 
 const AYUDA_HUIR_TERCERA := "Click derecho: moverte  ·  Shift + click derecho: correr  ·  ¡Escapá de los cazadores!  ·  Esc: pausa"
 const AYUDA_HUIR_PRIMERA := "WASD: moverte  ·  Shift + W: correr  ·  ¡Escapá de los cazadores!  ·  Esc: pausa"
@@ -53,7 +62,23 @@ const DATO_FINAL := "Fuera del juego, el yaguareté no tiene esta revancha: en A
 ## que el yaguareté: no se los puede alcanzar.
 @export var segundos_hasta_cansarse := 20.0
 
+@export_group("Nivel 4 (pasillo)")
+## Velocidad de los cazadores al empezar a perseguir y a los 10 s (el yaguareté corre a 7).
+@export var velocidad_inicial_persecucion := 5.0
+@export var velocidad_maxima_persecucion := 10.0
+@export var segundos_para_acelerar := 10.0
+## A esta distancia el cazador más cercano "lo alcanzó": empieza el cerco.
+@export var distancia_para_atraparlo := 2.5
+## Si en tantos segundos no lo alcanzaron, aparece un cazador justo detrás de él.
+@export var segundos_hasta_el_de_atras := 20.0
+## Caza inversa: en cuántos segundos se frenan los cazadores, y hasta qué velocidad.
+@export var segundos_frenandose := 7.0
+@export var velocidad_final_huida := 3.5
+## En la caza inversa del pasillo la ventaja es más corta: el frenado ya alarga la persecución.
+@export var segundos_de_ventaja_pasillo := 1.2
+
 var fase := Fase.INACTIVO
+var en_pasillo := false
 ## Al que se le trabó el arma: es el que hay que alcanzar en la caza inversa.
 var cazador_final: Node3D = null
 
@@ -106,6 +131,9 @@ func _process(delta: float) -> void:
 	if fase == Fase.INACTIVO:
 		return
 	_segundos_en_fase += delta
+	if en_pasillo:
+		_process_pasillo()
+		return
 	match fase:
 		Fase.PERSECUCION:
 			_reloj_reubicar -= delta
@@ -136,7 +164,134 @@ func _process(delta: float) -> void:
 					_final()
 
 
+## Nivel 4: aceleración de los cazadores, el que aparece detrás a los 20 s, y el frenado
+## de la caza inversa.
+func _process_pasillo() -> void:
+	var jugador = main.jugador
+	match fase:
+		Fase.PERSECUCION:
+			# Cada vez más rápidos: en "segundos_para_acelerar" ya corren más que el yaguareté.
+			var avance := clampf(_segundos_en_fase / segundos_para_acelerar, 0.0, 1.0)
+			_poner_velocidad(lerpf(velocidad_inicial_persecucion, velocidad_maxima_persecucion, avance))
+			if fmod(_segundos_en_fase, 1.5) < get_process_delta_time():
+				_armar_formacion()
+			var cercano := _cazador_mas_cercano()
+			# El que va adelante corre derecho, sin frenarse a disparar; los demás sí disparan.
+			for cazador in get_tree().get_nodes_in_group("cazadores"):
+				cazador.no_dispara = cazador == cercano
+			if cercano and Mundo.distancia_horizontal(cercano.global_position, jugador.global_position) <= distancia_para_atraparlo:
+				_acorralar(cercano)
+			elif _segundos_en_fase >= segundos_hasta_el_de_atras:
+				_aparecer_detras()
+		Fase.CAZA_INVERSA:
+			if jugador.quieto_forzado:
+				return  # todavía mira cómo huyen (la ventaja)
+			# Huyen tan rápido como el yaguareté y se van frenando, de forma que se note.
+			var avance := clampf(_segundos_en_fase / segundos_frenandose, 0.0, 1.0)
+			_poner_velocidad(lerpf(_velocidad_furia(), velocidad_final_huida, avance))
+			if get_tree().get_nodes_in_group("cazadores").is_empty():
+				_final()
+				return
+			var alcanzado := _cazador_mas_cercano()
+			if Mundo.distancia_horizontal(alcanzado.global_position, jugador.global_position) <= distancia_para_alcanzarlo:
+				cazador_final = alcanzado
+				_final()
+
+
+func _poner_velocidad(velocidad: float) -> void:
+	for cazador in get_tree().get_nodes_in_group("cazadores"):
+		cazador.velocidad_correr = velocidad
+		if cazador._moviendose:
+			cazador._velocidad_actual = velocidad
+
+
+## Velocidad del yaguareté furioso en la caza inversa.
+func _velocidad_furia() -> float:
+	return main.jugador.velocidad_correr * main.jugador.MULTIPLICADOR_FURIA
+
+
+## Si no lo alcanzaron a tiempo, aparece un cazador justo detrás del yaguareté: del lado de
+## la entrada (desde ahí lo persiguen) y más atrás que la cámara, así no se lo ve aparecer.
+func _aparecer_detras() -> void:
+	var jugador = main.jugador
+	var punto: Vector3 = Mundo.punto_navegable(jugador.global_position + Vector3(0, 0, 13.0))
+	var nuevo: Node3D = main.crear_cazador_en(punto)
+	nuevo.perseguir_sin_tregua()
+	_acorralar(nuevo)
+
+
 # --- Fases ---------------------------------------------------------------------
+
+## 0) Nivel 4. Presentación: quieto, el yaguareté ve llegar a un cazador por el sendero;
+## se le suman dos, uno a cada lado, y recién ahí empieza la persecución.
+func empezar_en_pasillo() -> void:
+	en_pasillo = true
+	_cambiar_fase(Fase.PRESENTACION)
+	var jugador = main.jugador
+	var pasillo = main.pasillo
+	jugador.modo_climax = true
+	jugador.quieto_forzado = true
+	jugador.llenar_hambre()  # en este nivel el hambre no importa: barra llena y no baja
+	main.offset_camara = CAMARA_HACIA_LA_ENTRADA
+	main.etiqueta_nivel.text = "La persecución"
+	main.contador.text = ""
+	main.ayuda.text = ""
+
+	# Primero, uno solo por el sendero.
+	var lugar: Vector3 = pasillo.punto_en_sendero(jugador.global_position.z + 8.0)
+	# Aparecen a unos metros de su puesto, saliendo de la niebla del sendero.
+	var aparicion: Vector3 = pasillo.punto_en_sendero(minf(lugar.z + 9.0, Pasillo.Z_ENTRADA - 1.0))
+	var primero: Node3D = main.crear_cazador_en(aparicion)
+	primero.ponerse_en(lugar)
+	await _esperar_que_lleguen([primero], 6.0)
+	await _esperar(1.2)
+
+	# Se le suman dos más, uno a cada lado.
+	var otros := []
+	for lado in [-1.0, 1.0]:
+		var otro: Node3D = main.crear_cazador_en(aparicion + Vector3(lado * 2.0, 0, 0))
+		otro.ponerse_en(lugar + Vector3(lado * 2.8, 0, 0.8))
+		otros.append(otro)
+	await _esperar_que_lleguen(otros, 6.0)
+	await _esperar(1.0)
+	_empezar_persecucion_en_pasillo()
+
+
+## El yaguareté mira a los cazadores mientras caminan a su lugar (con un tiempo máximo).
+func _esperar_que_lleguen(cazadores: Array, maximo: float) -> void:
+	var espera := 0.0
+	while espera < maximo:
+		var llegaron := true
+		for cazador in cazadores:
+			if is_instance_valid(cazador) and not cazador.llego_a_su_puesto():
+				llegaron = false
+		if is_instance_valid(cazadores[0]):
+			main.jugador.punto_de_atencion = cazadores[0].global_position
+		if llegaron:
+			return
+		await _esperar(0.1)
+		espera += 0.1
+
+
+## 1) Nivel 4: los tres empiezan a disparar y a seguirlo. Hay que dar media vuelta y correr.
+func _empezar_persecucion_en_pasillo() -> void:
+	_cambiar_fase(Fase.PERSECUCION)
+	var jugador = main.jugador
+	jugador.quieto_forzado = false
+	jugador.punto_de_atencion = null
+	main.contador.text = "¡Escapá!"
+	main.ayuda.text = AYUDA_HUIR_PRIMERA if main.primera_persona else AYUDA_HUIR_TERCERA
+	ambiente.stop()
+	_tocar(musica_persecucion)
+	for cazador in get_tree().get_nodes_in_group("cazadores"):
+		cazador.perseguir_sin_tregua()
+	_poner_velocidad(velocidad_inicial_persecucion)
+	_armar_formacion()
+	# La cámara pasa al otro lado, mirando hacia el fondo: hacia donde hay que escapar.
+	main.offset_camara = CAMARA_HACIA_EL_FONDO
+	_anunciar("¡Cazadores! ¡Huí!", 3.0)
+
+
 
 ## 1) Persecución. La llama main.gd al comer la última presa del último nivel.
 func empezar() -> void:
@@ -161,15 +316,19 @@ func empezar() -> void:
 	_anunciar("¡Cazadores! ¡Huí!", 3.0)
 
 
-## 2) Acorralado: lo rodean, el más cercano le apunta y el arma se traba.
-func _acorralar() -> void:
+## 2) Acorralado: lo rodean, el más cercano (o "elegido") le apunta y el arma se traba.
+func _acorralar(elegido: Node3D = null) -> void:
 	_cambiar_fase(Fase.ACORRALADO)
 	var jugador = main.jugador
 	jugador.quieto_forzado = true
 	main.contador.text = "¡Acorralado!"
-	# Para que el cerco se arme cerca, los que quedaron lejos o del otro lado se acercan.
-	_reubicar_a_los_que_lo_perdieron(distancia_cerco_resto + 8.0)
-	cazador_final = _cazador_mas_cercano()
+	if en_pasillo:
+		# Los cazadores vienen de atrás: la cámara da media vuelta para verlos.
+		main.offset_camara = CAMARA_HACIA_LA_ENTRADA
+	else:
+		# Para que el cerco se arme cerca, los que quedaron lejos o del otro lado se acercan.
+		_reubicar_a_los_que_lo_perdieron(distancia_cerco_resto + 8.0)
+	cazador_final = elegido if elegido else _cazador_mas_cercano()
 	for cazador in get_tree().get_nodes_in_group("cazadores"):
 		cazador.cercar(distancia_cerco_apunta if cazador == cazador_final else distancia_cerco_resto)
 	_anunciar("¡Te rodearon!", 2.5)
@@ -208,6 +367,10 @@ func _empezar_caza_inversa() -> void:
 	var jugador = main.jugador
 	for cazador in get_tree().get_nodes_in_group("cazadores"):
 		cazador.huir_asustado()
+		if en_pasillo:
+			cazador.eje_de_huida = Vector3(0, 0, 1)  # huyen por el pasillo, nunca hacia los costados
+	if en_pasillo:
+		_poner_velocidad(_velocidad_furia())
 	# SDD: la tensión se rompe con una música animada, casi cómica.
 	musica_persecucion.stop()
 	_tocar(musica_caza_inversa)
@@ -216,8 +379,9 @@ func _empezar_caza_inversa() -> void:
 	main.ayuda.text = AYUDA_CAZAR_PRIMERA if main.primera_persona else AYUDA_CAZAR_TERCERA
 
 	# Ventaja: el yaguareté todavía no se mueve; mira cómo el cazador suelta el rifle y huye.
+	var ventaja := segundos_de_ventaja_pasillo if en_pasillo else segundos_de_ventaja
 	var espera := 0.0
-	while espera < segundos_de_ventaja and is_instance_valid(cazador_final):
+	while espera < ventaja and is_instance_valid(cazador_final):
 		jugador.punto_de_atencion = cazador_final.global_position
 		await _esperar(0.1)
 		espera += 0.1

@@ -342,6 +342,12 @@ func _velocidad_actual() -> float:
 	return corriendo if _corriendo and puede_correr() else velocidad_caminar
 
 
+## Barra de hambre llena (nivel 4: ahí el hambre no importa y no baja).
+func llenar_hambre() -> void:
+	hambre = hambre_maxima
+	hambre_cambio.emit(hambre, hambre_maxima)
+
+
 func _gastar_hambre(delta: float) -> void:
 	if modo_climax:
 		return  # en el clímax la barra queda como está

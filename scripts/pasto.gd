@@ -17,29 +17,35 @@ const DISTANCIA_VISIBLE := 45.0
 
 ## Cubre de pasto el cuadrado de lado 2 × "mitad", salteando el río y su orilla.
 func generar(mitad: float, rio: Rio) -> void:
+	var fuera_del_rio := func(punto: Vector3) -> bool: return rio != null and rio.en_agua(punto, 1.8)
+	generar_en(Rect2(-mitad, -mitad, mitad * 2.0, mitad * 2.0), fuera_del_rio)
+
+
+## Cubre de pasto un rectángulo (en el plano x-z). "excluir" recibe un punto y devuelve
+## true si ahí no va pasto (el río, un sendero...).
+func generar_en(zona_total: Rect2, excluir: Callable) -> void:
 	var material := ShaderMaterial.new()
 	material.shader = SHADER
 	var parcelas: Array[ArrayMesh] = []
 	for variante in VARIANTES:
 		parcelas.append(_parcela(variante, material))
 
-	var zonas_por_lado := ceili(mitad * 2.0 / TAMANO_ZONA)
-	for zx in zonas_por_lado:
-		for zz in zonas_por_lado:
-			var esquina := Vector2(-mitad + zx * TAMANO_ZONA, -mitad + zz * TAMANO_ZONA)
-			_zona(esquina, rio, parcelas)
+	for zx in ceili(zona_total.size.x / TAMANO_ZONA):
+		for zz in ceili(zona_total.size.y / TAMANO_ZONA):
+			var esquina := zona_total.position + Vector2(zx, zz) * TAMANO_ZONA
+			_zona(esquina, excluir, parcelas)
 
 
-## Una zona: una parcela por metro cuadrado (fuera del agua y del barro).
-func _zona(esquina: Vector2, rio: Rio, parcelas: Array[ArrayMesh]) -> void:
+## Una zona: una parcela por metro cuadrado (salvo donde "excluir" diga que no).
+func _zona(esquina: Vector2, excluir: Callable, parcelas: Array[ArrayMesh]) -> void:
 	var por_variante := []
 	for variante in VARIANTES:
 		por_variante.append([])
 	for x in int(TAMANO_ZONA):
 		for z in int(TAMANO_ZONA):
 			var punto := Vector3(esquina.x + x + 0.5, 0, esquina.y + z + 0.5)
-			if rio != null and rio.en_agua(punto, 1.8):
-				continue  # río y orilla de barro
+			if excluir.call(punto):
+				continue
 			var giro := Basis(Vector3.UP, randf() * TAU).scaled(Vector3(1, randf_range(0.8, 1.2), 1))
 			por_variante[randi() % VARIANTES].append(Transform3D(giro, punto))
 	for variante in VARIANTES:

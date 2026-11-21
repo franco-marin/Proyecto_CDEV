@@ -63,6 +63,13 @@ var asustado := false
 var lider: Node3D = null
 var lado_en_formacion := 0.0
 var rango_en_formacion := 0
+## Nivel 4, presentación: puesto al que camina y donde se queda mirando al yaguareté.
+var _puesto := Vector3.INF
+## Nivel 4, caza inversa: si no es cero, huye a lo largo de este eje (el del pasillo), siempre
+## hacia el lado contrario al yaguareté, en vez de elegir cualquier dirección.
+var eje_de_huida := Vector3.ZERO
+## Nivel 4: el que encabeza la persecución no se frena a disparar (si no, nunca lo alcanza).
+var no_dispara := false
 
 var _apuntando := 0.0
 ## Mientras cerca al yaguareté: a qué distancia se queda (negativo = no está cercando).
@@ -117,6 +124,10 @@ func _pensar() -> void:
 	if asustado:
 		_huir_sin_parar()
 		return
+	if _puesto != Vector3.INF:
+		if not _moviendose:
+			_mirando_al_jugador = true  # llegó a su puesto: se queda mirando
+		return
 	if _distancia_cerco > 0.0:
 		_cercar()
 		return
@@ -167,7 +178,20 @@ func persigue_al_jugador() -> bool:
 ## si llega a su lado se queda pegado a él (el jugador no pierde en el clímax).
 func perseguir_sin_tregua() -> void:
 	implacable = true
+	_puesto = Vector3.INF
 	velocidad_correr = velocidad_persecucion
+
+
+## Nivel 4, presentación: camina hasta "punto" y se queda ahí mirando al yaguareté.
+func ponerse_en(punto: Vector3) -> void:
+	implacable = false
+	_distancia_cerco = -1.0
+	_puesto = punto
+	_ir_a(punto, velocidad_caminar * 1.7)  # al trote
+
+
+func llego_a_su_puesto() -> bool:
+	return _puesto == Vector3.INF or Mundo.distancia_horizontal(global_position, _puesto) < 1.0 or not _moviendose
 
 
 ## Acorralado: se acerca hasta "distancia" del yaguareté, se frena y se queda mirándolo.
@@ -219,6 +243,14 @@ func cansarse() -> void:
 func _huir_sin_parar() -> void:
 	var jugador := _jugador()
 	if jugador == null:
+		return
+	if eje_de_huida != Vector3.ZERO:
+		# En el pasillo: siempre por el pasillo, alejándose del yaguareté.
+		var sentido := signf((global_position - jugador.global_position).dot(eje_de_huida))
+		if sentido == 0.0:
+			sentido = 1.0
+		if not _moviendose or agente.distance_to_target() < 4.0:
+			_ir_a(Mundo.punto_navegable(global_position + eje_de_huida * sentido * 15.0), velocidad_correr)
 		return
 	if _moviendose and agente.distance_to_target() > 3.0:
 		return
@@ -294,7 +326,7 @@ func _atrapar(presa) -> void:
 ## Le puede disparar si tiene balas, ya pasó la espera entre tiros, está a distancia de
 ## tiro y no hay un tronco en el medio.
 func _puede_disparar_a(jugador: Node3D) -> bool:
-	if balas <= 0 or _espera_disparo > 0.0:
+	if no_dispara or balas <= 0 or _espera_disparo > 0.0:
 		return false
 	var distancia := distancia_a(jugador)
 	if distancia < distancia_disparo_minima or distancia > distancia_disparo_maxima:

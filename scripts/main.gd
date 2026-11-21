@@ -85,6 +85,10 @@ var primera_persona := false
 var tiempo_jugado := 0.0
 var zoom := 1.0
 var rio: Rio
+## Nivel 4: el pasillo lineal del final (ver pasillo.gd y climax.gd).
+var es_pasillo := false
+var pasillo: Pasillo
+var _pasillo_empezado := false
 
 var _mensaje := ""
 var _segundos_mensaje := 0.0
@@ -136,6 +140,12 @@ var _proxima_manada := 0
 
 func _ready() -> void:
 	nivel = Niveles.datos(Mundo.nivel)
+	es_pasillo = nivel.get("pasillo", false)
+	if es_pasillo:
+		Mundo.limite = Vector2(Pasillo.MEDIO_ANCHO, Pasillo.MEDIO_LARGO)
+		_preparar_pasillo()
+	else:
+		Mundo.limite = Vector2(Mundo.MITAD_MAPA, Mundo.MITAD_MAPA)
 	pantalla_final.visible = false
 	aviso.visible = false
 	aviso_comer.visible = false
@@ -169,19 +179,25 @@ func _ready() -> void:
 
 	# 1) El río y la selva. 2) Calcular por dónde se puede caminar ("hornear" la
 	# navegación). Hay que esperar a que termine antes de soltar a los animales.
-	_crear_rio()
-	_decorar_orillas()
-	_cubrir_de_pasto()
+	if es_pasillo:
+		_generar_pasillo()
+	else:
+		_crear_rio()
+		_decorar_orillas()
+		_cubrir_de_pasto()
 	_empezar_sonidos()
-	_generar_bosque()
+	if not es_pasillo:
+		_generar_bosque()
 	navegacion.bake_navigation_mesh(true)
 	await navegacion.bake_finished
 	# El servidor de navegación aplica la malla nueva unos frames después: esperamos a que responda.
 	while not _navegacion_lista():
 		await get_tree().physics_frame
 
-	_poblar_nivel()
+	if not es_pasillo:
+		_poblar_nivel()
 	listo = true
+	_empezar_pasillo_si_corresponde()
 
 
 func _process(delta: float) -> void:
@@ -242,10 +258,11 @@ func _empezar_partida(modo: int) -> void:
 	jugando = true
 	menu_pausa.habilitado = true
 	get_tree().paused = false
+	_empezar_pasillo_si_corresponde()
 
 
-## Botones "Nivel 1/2/3" del menú: solo se pueden elegir los niveles desbloqueados,
-## salvo en el modo admin (escondido: tecla P en el menú), que habilita los tres.
+## Botones "Nivel 1 a 4" del menú: solo se pueden elegir los niveles desbloqueados,
+## salvo en el modo admin (escondido: tecla P en el menú), que habilita todos.
 func _preparar_botones_de_nivel() -> void:
 	for i in botones_nivel.get_child_count():
 		var boton := botones_nivel.get_child(i) as Button
@@ -366,7 +383,7 @@ func _empezar_sonidos() -> void:
 	# nivel que se juega, porque los archivos son pesados.
 	sonido_ambiente.stream = load(nivel.sonido_ambiente)
 	sonido_ambiente.volume_db = nivel.volumen_ambiente
-	for sonido in [sonido_ambiente, sonido_rio]:
+	for sonido in [sonido_ambiente, sonido_rio] if rio != null else [sonido_ambiente]:
 		sonido.finished.connect(sonido.play)
 		sonido.play()
 
@@ -374,6 +391,46 @@ func _empezar_sonidos() -> void:
 func _actualizar_sonido_rio() -> void:
 	if rio != null:
 		sonido_rio.global_position = rio.punto_de_agua_cercano(jugador.global_position) + Vector3.UP * 0.3
+
+
+# --- Nivel 4: el pasillo ------------------------------------------------------------
+
+## Antes de generar: sin río, sin los límites cuadrados del mapa y con el yaguareté en
+## su lugar de partida, mirando hacia la entrada (por ahí llegan los cazadores).
+func _preparar_pasillo() -> void:
+	rio = null
+	Mundo.rio = null
+	pasillo = Pasillo.new()
+	pasillo.name = "Pasillo"
+	add_child(pasillo)
+	# Las paredes del mapa cuadrado cortarían el pasillo: se usan las barreras del pasillo.
+	var limites := navegacion.get_node("Limites")
+	navegacion.remove_child(limites)
+	limites.queue_free()
+	var malla_navegacion := navegacion.navigation_mesh.duplicate() as NavigationMesh
+	malla_navegacion.filter_baking_aabb = AABB(
+		Vector3(-Pasillo.MEDIO_ANCHO - 2.0, -1.0, Pasillo.Z_FONDO - 2.0),
+		Vector3(Pasillo.MEDIO_ANCHO * 2.0 + 4.0, 6.0, Pasillo.Z_ENTRADA - Pasillo.Z_FONDO + 4.0))
+	navegacion.navigation_mesh = malla_navegacion
+	jugador.global_position = pasillo.inicio_jugador() + Vector3.UP * 0.1
+	offset_camara = Climax.CAMARA_HACIA_LA_ENTRADA
+	contador.text = ""
+
+
+func _generar_pasillo() -> void:
+	Mundo.limpiar_cobertura()
+	pasillo.generar(navegacion, contenedor_sotobosque, nivel.sotobosque)
+	var pasto := Pasto.new()
+	pasto.name = "Pasto"
+	add_child(pasto)
+	pasto.generar_en(pasillo.zona_de_pasto(), func(punto: Vector3) -> bool: return pasillo.en_sendero(punto, 0.3))
+
+
+## El final arranca cuando ya está todo listo y el jugador eligió cómo jugar.
+func _empezar_pasillo_si_corresponde() -> void:
+	if es_pasillo and listo and jugando and not _pasillo_empezado:
+		_pasillo_empezado = true
+		climax.empezar_en_pasillo()
 
 
 func _crear_rio() -> void:
@@ -540,7 +597,7 @@ func _navegacion_lista() -> bool:
 	var mapa := get_world_3d().navigation_map
 	if NavigationServer3D.map_get_iteration_id(mapa) == 0:
 		return false
-	var prueba := Vector3(20, 0, 20)
+	var prueba := Vector3(0, 0, 20) if es_pasillo else Vector3(20, 0, 20)
 	return Mundo.distancia_horizontal(NavigationServer3D.map_get_closest_point(mapa, prueba), prueba) < 3.0
 
 
@@ -699,7 +756,7 @@ func _on_fruta_consumida(_fruta: Node3D) -> void:
 
 ## Cada pocos segundos repone animales para que el ecosistema no se extinga.
 func _on_timer_ecosistema_timeout() -> void:
-	if not listo:
+	if not listo or es_pasillo:
 		return
 	for especie in nivel.animales:
 		var cuantos := get_tree().get_nodes_in_group(ESPECIES[especie].grupo).size()
@@ -732,10 +789,8 @@ func _on_jugador_llego_al_destino() -> void:
 func _on_jugador_comio(total: int) -> void:
 	_actualizar_contador(total)
 	if total >= nivel.presas_para_ganar:
-		if Mundo.nivel < Niveles.CANTIDAD:
-			_terminar(true, "Comiste %d presas: superaste el nivel." % total)
-		else:
-			climax.empezar()  # último nivel: en vez de ganar, empieza la persecución final
+		# Los niveles de caza (1 a 3) se ganan así; el final está en el nivel 4 (el pasillo).
+		_terminar(true, "Comiste %d presas: superaste el nivel." % total)
 
 
 func _on_jugador_murio(motivo: String) -> void:
@@ -759,6 +814,8 @@ func _on_boton_menu_pressed() -> void:
 
 
 func _actualizar_contador(total: int) -> void:
+	if es_pasillo:
+		return  # en el nivel 4 no hay presas: los textos los pone climax.gd
 	contador.text = "Presas: %d / %d" % [total, nivel.presas_para_ganar]
 
 

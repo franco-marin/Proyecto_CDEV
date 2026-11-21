@@ -2,9 +2,10 @@ class_name Niveles
 extends RefCounted
 ## Configuración de cada nivel. Del 1 al 3 la selva se va degradando: menos árboles,
 ## maleza, animales y pájaros, más árboles talados, cazadores, basura y trampas, y el río
-## cada vez más sucio.
+## cada vez más sucio. El nivel 4 es distinto: un pasillo lineal con el final de la
+## experiencia (la persecución y la caza inversa, ver climax.gd).
 
-const CANTIDAD := 3
+const CANTIDAD := 4
 
 const DATOS := [
 	{
@@ -99,6 +100,19 @@ const DATOS := [
 		"niebla": Color(0.5, 0.5, 0.47),
 		"niebla_volumetrica": 0.028,
 		"luz": 0.95,
+		"sonido_ambiente": "res://sonidos/sonido_ambiente_nivel_3.wav",
+		"volumen_ambiente": 0.0,
+	},
+	{
+		"nombre": "Nivel 4: La persecución",
+		# Pasillo: un sendero entre paredes de selva y piedra (lo arma main.gd, sin río,
+		# animales, basura ni trampas). No hay presas: el nivel es el final de la experiencia.
+		"pasillo": true,
+		"presas_para_ganar": 0,
+		"sotobosque": 260,
+		"niebla": Color(0.5, 0.5, 0.47),
+		"niebla_volumetrica": 0.024,
+		"luz": 1.0,
 		"sonido_ambiente": "res://sonidos/sonido_ambiente_nivel_3.wav",
 		"volumen_ambiente": 0.0,
 	},
