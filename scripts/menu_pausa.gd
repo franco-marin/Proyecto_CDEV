@@ -46,4 +46,4 @@ func _on_boton_menu_pressed() -> void:
 
 
 func _on_boton_salir_pressed() -> void:
-	get_tree().quit()
+	Mundo.cerrar_juego()
