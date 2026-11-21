@@ -45,6 +45,9 @@ func _physics_process(_delta: float) -> void:
 func _disparar(jugador) -> void:
 	disparada = true
 	jugador.atrapar_en_trampa(SEGUNDOS_SIN_CORRER)
+	var cierre: AudioStreamPlayer3D = $Cierre
+	if cierre.stream and Mundo.hay_audio():
+		cierre.play()
 	var tween := create_tween().set_parallel()
 	for bisagra in _mandibulas:
 		tween.tween_property(bisagra, "rotation:x", signf(bisagra.rotation.x) * 0.15, 0.08)

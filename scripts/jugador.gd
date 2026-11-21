@@ -88,6 +88,8 @@ var _gravedad: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var modelo: Node3D = $Modelo
 @onready var animacion: AnimationPlayer = $AnimationPlayer
 @onready var agente: NavigationAgent3D = $Agente
+## Golpe del zarpazo cuando le pega a una presa.
+@onready var impacto: AudioStreamPlayer3D = $Impacto
 ## La cámara de primera persona cuelga de "Ojos". No dibuja la capa visual 2
 ## (la cabeza del modelo) para no ver su interior. En su lugar, un hocico pegado
 ## a la cámara se ve siempre debajo de la vista, como la propia nariz.
@@ -165,6 +167,9 @@ func zarpazo() -> void:
 	var presa := presa_al_alcance(true)
 	if presa:
 		presa.recibir_golpe(self)
+		if impacto.stream and Mundo.hay_audio():
+			impacto.pitch_scale = randf_range(0.9, 1.1)
+			impacto.play()
 
 
 ## La presa más cercana que está al alcance y de frente, o null.
