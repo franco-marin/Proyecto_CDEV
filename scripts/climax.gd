@@ -95,6 +95,10 @@ var _tween_anuncio: Tween
 @onready var ambiente: AudioStreamPlayer = $"../Ambiente"
 @onready var musica_persecucion: AudioStreamPlayer = $MusicaPersecucion
 @onready var musica_caza_inversa: AudioStreamPlayer = $MusicaCazaInversa
+@onready var latidos: AudioStreamPlayer = $Latidos
+## Golpe de piano cuando al cazador se le traba el arma y se da vuelta la situación.
+@onready var golpe_dramatico: AudioStreamPlayer = $GolpeDramatico
+@onready var rugido: AudioStreamPlayer = $Rugido
 
 
 func _ready() -> void:
@@ -283,6 +287,7 @@ func _empezar_persecucion_en_pasillo() -> void:
 	main.ayuda.text = AYUDA_HUIR_PRIMERA if main.primera_persona else AYUDA_HUIR_TERCERA
 	ambiente.stop()
 	_tocar(musica_persecucion)
+	_tocar(latidos)
 	for cazador in get_tree().get_nodes_in_group("cazadores"):
 		cazador.perseguir_sin_tregua()
 	_poner_velocidad(velocidad_inicial_persecucion)
@@ -305,6 +310,7 @@ func empezar() -> void:
 	# SDD: el sonido de la naturaleza se apaga de golpe y entra la música de persecución.
 	ambiente.stop()
 	_tocar(musica_persecucion)
+	_tocar(latidos)
 	var faltan := cazadores_en_persecucion - get_tree().get_nodes_in_group("cazadores").size()
 	for i in maxi(faltan, 0):
 		main.crear_cazador_en(_punto_fuera_de_vista(distancia_aparicion))
@@ -371,9 +377,12 @@ func _empezar_caza_inversa() -> void:
 			cazador.eje_de_huida = Vector3(0, 0, 1)  # huyen por el pasillo, nunca hacia los costados
 	if en_pasillo:
 		_poner_velocidad(_velocidad_furia())
-	# SDD: la tensión se rompe con una música animada, casi cómica.
+	# La tensión se rompe: se corta la persecución, golpe de piano y rugido. La música de la
+	# caza inversa entra cuando el yaguareté sale a perseguirlos.
 	musica_persecucion.stop()
-	_tocar(musica_caza_inversa)
+	latidos.stop()
+	_tocar(golpe_dramatico)
+	_tocar(rugido)
 	main.etiqueta_nivel.text = "La caza inversa"
 	main.contador.text = "¡Alcanzalo!"
 	main.ayuda.text = AYUDA_CAZAR_PRIMERA if main.primera_persona else AYUDA_CAZAR_TERCERA
@@ -388,6 +397,7 @@ func _empezar_caza_inversa() -> void:
 	jugador.quieto_forzado = false
 	jugador.punto_de_atencion = null
 	jugador.furia = true
+	_tocar(musica_caza_inversa)  # arranca cuando el yaguareté sale a perseguirlos
 	_segundos_en_fase = 0.0  # el cansancio del cazador se cuenta desde que lo empieza a perseguir
 	_anunciar("¡Ahora cazás vos!", 3.0)
 
@@ -399,6 +409,7 @@ func _final() -> void:
 	anuncio.visible = false
 	var tween := create_tween()
 	tween.tween_property(fundido, "color:a", 1.0, 0.8)
+	tween.parallel().tween_property(musica_caza_inversa, "volume_db", -40.0, 0.8)
 	await tween.finished
 	await _esperar(0.6)
 	main.terminar_climax(TITULO_FINAL, TEXTO_FINAL, DATO_FINAL)
@@ -509,7 +520,7 @@ func _anunciar(texto: String, segundos: float) -> void:
 
 ## Los sonidos los carga el equipo de audio: si el nodo no tiene "Stream", no suena nada.
 func _tocar(reproductor: AudioStreamPlayer) -> void:
-	if reproductor.stream:
+	if reproductor.stream and Mundo.hay_audio():
 		reproductor.play()
 
 

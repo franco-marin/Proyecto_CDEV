@@ -8,6 +8,11 @@
 [ext_resource type="Script" path="res://scripts/climax.gd" id="6_climax"]
 [ext_resource type="AudioStream" path="res://sonidos/sonido_rio.wav" id="8_rio"]
 [ext_resource type="Script" path="res://scripts/icono_ojo.gd" id="6_icono_ojo"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_musica_persecucion.mp3" id="9_musica_persecucion"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_musica_caza_inversa.wav" id="10_musica_caza_inversa"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_latidos.wav" id="11_latidos"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_golpe_dramatico.wav" id="12_golpe_dramatico"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_rugido.mp3" id="13_rugido"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 
@@ -158,8 +163,22 @@ max_distance = 35.0
 script = ExtResource("6_climax")
 
 [node name="MusicaPersecucion" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("9_musica_persecucion")
+volume_db = -4.0
 
 [node name="MusicaCazaInversa" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("10_musica_caza_inversa")
+volume_db = -4.0
+
+[node name="Latidos" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("11_latidos")
+volume_db = -6.0
+
+[node name="GolpeDramatico" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("12_golpe_dramatico")
+
+[node name="Rugido" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("13_rugido")
 
 [node name="TimerEcosistema" type="Timer" parent="."]
 wait_time = 3.0

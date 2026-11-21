@@ -74,6 +74,13 @@ var _cerrando := false
 ## Cierra el juego en orden: pausa todo, detiene todos los sonidos y espera unos frames
 ## para que el audio los suelte antes de salir. Si se cerrara con sonidos sonando, Godot
 ## avisaría "resources still in use at exit".
+## Sin pantalla (el pipeline de GitHub y las pruebas automáticas) no hay audio de verdad: el
+## driver falso no suelta los sonidos que siguen sonando al cerrar, y Godot avisa "resources
+## still in use at exit", que el pipeline toma como error. Ahí no se reproduce nada.
+func hay_audio() -> bool:
+	return DisplayServer.get_name() != "headless"
+
+
 func cerrar_juego() -> void:
 	if _cerrando:
 		return

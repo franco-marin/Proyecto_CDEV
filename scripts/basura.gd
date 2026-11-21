@@ -1,6 +1,7 @@
 extends Node3D
 ## Montón de basura (bolsas, botellas y latas). Es chico y cuesta verlo entre la
 ## vegetación; si el yaguareté pasa a menos de 1 m, le baja el hambre (ver jugador.gd).
+## Tiene moscas zumbando alrededor: se oyen solo de cerca y ayudan a no pisarla.
 
 
 func _ready() -> void:
@@ -18,6 +19,15 @@ func _ready() -> void:
 		var lata := _pieza(_cilindro(0.035, 0.035, 0.12), Vector3(randf_range(-0.4, 0.4), 0.035, randf_range(-0.4, 0.4)),
 			Vector3.ONE, colores_lata.pick_random())
 		lata.rotation = Vector3(PI / 2.0, randf() * TAU, 0)
+	_zumbar()
+
+
+## Cada montón arranca el zumbido en un punto distinto, para que no suenen todos iguales.
+func _zumbar() -> void:
+	var moscas: AudioStreamPlayer3D = $Moscas
+	if moscas.stream and Mundo.hay_audio():
+		moscas.pitch_scale = randf_range(0.9, 1.1)
+		moscas.play(randf() * moscas.stream.get_length())
 
 
 func _pieza(malla: PrimitiveMesh, posicion: Vector3, escala: Vector3, color: Color) -> MeshInstance3D:
