@@ -1,7 +1,7 @@
 # Bosque Hambriento
 
 Juego 3D hecho con **Godot 4.7**. Sos un yaguareté en la selva paranaense: en cada nivel
-tenés que cazar y comer 3 presas (tapires, pecaríes, corzuelas, carpinchos, osos
+tenés que cazar y comer 2 presas (tapires, pecaríes, corzuelas, carpinchos, osos
 hormigueros, ocelotes o yacarés) sin morir de hambre y sin que te atrape un cazador.
 Primero hay que abatirlas a zarpazos y después comerlas. La maleza te esconde y el río
 —que cruzás nadando— es una vía de escape, porque los cazadores no lo cruzan.
@@ -15,9 +15,15 @@ El mapa se genera al azar en cada partida, siempre con un río.
 
 | Nivel | Selva | Peligros |
 |-------|-------|----------|
-| 1: Selva intacta | Mucha maleza y animales, río celeste | Yacarés en el río |
-| 2: Selva amenazada | Menos maleza y animales, río verdoso | 2 cazadores, basura (te enferma si pasás a menos de 1 m) |
-| 3: Selva degradada | Poca maleza y pocos animales, río sucio | 5 cazadores, más basura y trampas (10 s sin poder correr) |
+| 1: Selva intacta | Selva densa, mucha maleza, animales y pájaros, río celeste | Yacarés en el río |
+| 2: Selva amenazada | Menos árboles y maleza, primeros tocones y árboles talados, menos animales y pájaros, río verdoso | 2 cazadores, basura (te enferma si pasás a menos de 1 m) |
+| 3: Selva degradada | Selva rala con muchos árboles talados, poca maleza, pocos animales y casi sin pájaros, río sucio | 3 cazadores, más basura y trampas (10 s sin poder correr) |
+
+**El final:** al comer la última presa del nivel 3 empieza la persecución: 3 cazadores
+te persiguen sin rendirse y disparando, y solo podés huir (ni el río te salva). A los 30 s
+te acorralan, al cazador se le traba el arma y empieza la **caza inversa**: los cazadores
+sueltan el rifle y huyen, más rápido que el yaguareté. A los 20 s se cansan, y al alcanzar
+a cualquiera de ellos termina la experiencia. En el clímax no se puede perder.
 
 ## Cómo abrirlo
 

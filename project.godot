@@ -89,6 +89,11 @@ pantalla_completa={
 3d_physics/layer_4="animales"
 3d_physics/layer_5="comida"
 
+[rendering]
+
+environment/volumetric_fog/volume_size=48
+environment/volumetric_fog/volume_depth=48
+
 [shader_globals]
 
 jugador_posicion={
