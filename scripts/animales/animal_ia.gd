@@ -17,12 +17,41 @@ const INTERVALO_PENSAR := 0.25
 @export var hambre_minima := 15.0
 @export var hambre_maxima := 35.0
 
+@export_group("Como presa del yaguareté")
+## Cuántos zarpazos aguanta antes de caer.
+@export var vida := 1
+## Cuánta hambre le quita al yaguareté comérselo.
+@export var valor_alimenticio := 30.0
+
+@export_group("Agua")
+## Si puede meterse al río (carpinchos y yacarés). Los demás animales nunca lo cruzan.
+@export var puede_nadar := false
+## Velocidad en el agua respecto de la velocidad en tierra.
+@export var multiplicador_en_agua := 0.6
+## Cuánto se hunde el cuerpo al nadar.
+@export var profundidad_nado := 0.3
+
+## Segundos que queda en el suelo después de caer, si nadie se lo come.
+const SEGUNDOS_ABATIDO := 60.0
+## Si el yaguareté está escondido en la maleza, solo lo ven desde el 30 % de la distancia.
+const FACTOR_COBERTURA := 0.3
+
 var estado: Estado = Estado.DEAMBULAR
 ## Lo que está persiguiendo, de lo que huye o la fruta a la que va. Sin tipo a propósito:
 ## puede ser una fruta, otro animal o el jugador.
 var objetivo = null
 var tiempo_en_estado := 0.0
 var vivo := true
+## Cayó por los zarpazos del yaguareté y está en el suelo, listo para ser comido.
+var abatido := false
+## Está dentro del río (solo los que pueden nadar llegan a estarlo).
+var en_agua := false
+## Recibió al menos un zarpazo: mientras se mueve va dejando un rastro de sangre.
+var herido := false
+
+## Metros recorridos desde la última gota del rastro.
+var _recorrido_rastro := 0.0
+const METROS_ENTRE_GOTAS := 0.6
 
 var _velocidad_actual := 0.0
 var _moviendose := false
@@ -32,12 +61,13 @@ var _reloj_pensar := 0.0
 var _gravedad: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 @onready var agente: NavigationAgent3D = $Agente
-@onready var modelo: ModeloAnimal = $Modelo
+## Sin tipo a propósito: puede ser un ModeloAnimal o un ModeloHumano (ambos tienen "velocidad").
+@onready var modelo = $Modelo
 
 
 func _ready() -> void:
 	# Valores al azar para que no todos hagan lo mismo al mismo tiempo.
-	_tiempo_para_hambre = randf_range(0.0, hambre_maxima)
+	_tiempo_para_hambre = randf_range(hambre_minima * 0.3, hambre_maxima)
 	_pausa = randf_range(0.0, 2.0)
 	_reloj_pensar = randf() * INTERVALO_PENSAR
 	modelo.rotation.y = randf() * TAU
@@ -58,6 +88,17 @@ func _physics_process(delta: float) -> void:
 		_pensar()
 
 	_mover(delta)
+	if herido:
+		_dejar_rastro(delta)
+
+
+## Un animal herido deja una gota de sangre cada tanto mientras se mueve.
+func _dejar_rastro(delta: float) -> void:
+	_recorrido_rastro += Vector2(velocity.x, velocity.z).length() * delta
+	if _recorrido_rastro >= METROS_ENTRE_GOTAS:
+		_recorrido_rastro = 0.0
+		var al_costado := Vector3(randf_range(-0.15, 0.15), 0, randf_range(-0.15, 0.15))
+		Efectos.gota(get_parent(), global_position + al_costado, randf_range(0.4, 0.8))
 
 
 ## Cada especie lo redefine con sus propias prioridades.
@@ -74,8 +115,24 @@ func deambular() -> void:
 		_detener()
 		_pausa = randf_range(0.5, 2.0)
 	if not _moviendose and _pausa <= 0.0:
-		_ir_a(Mundo.punto_aleatorio_cerca(global_position, radio_deambular), velocidad_caminar)
+		_ir_a(Mundo.punto_aleatorio_cerca(_centro_de_deambular(), radio_deambular), velocidad_caminar)
 		_pausa = randf_range(1.5, 4.0)  # descanso al llegar
+
+
+## Alrededor de qué punto pasea. Las especies pueden redefinirlo (la manada, el río...).
+func _centro_de_deambular() -> Vector3:
+	return global_position
+
+
+## Devuelve al yaguareté si lo ve a menos de "distancia". Si está escondido en la
+## maleza, solo lo ve desde una fracción de esa distancia (FACTOR_COBERTURA).
+func ver_al_jugador(distancia: float) -> Node3D:
+	var jugador = get_tree().get_first_node_in_group("jugador")
+	if not es_valido(jugador):
+		return null
+	if jugador.oculto:
+		distancia *= FACTOR_COBERTURA
+	return jugador if distancia_a(jugador) <= distancia else null
 
 
 func huir_de(amenaza: Node3D) -> void:
@@ -90,10 +147,18 @@ func huir_de(amenaza: Node3D) -> void:
 		lejos = Vector3.FORWARD
 	# Un poco de azar en la dirección para no quedar acorralado contra los bordes.
 	lejos = lejos.normalized().rotated(Vector3.UP, randf_range(-0.6, 0.6))
-	var destino := Mundo.punto_navegable(global_position + lejos * 8.0)
-	if Mundo.distancia_horizontal(destino, global_position) < 3.0:
-		destino = Mundo.punto_navegable(global_position + lejos.rotated(Vector3.UP, PI / 2.0 * signf(randf() - 0.5)) * 8.0)
-	_ir_a(destino, velocidad_correr)
+	# Si en esa dirección hay un borde o el río (y no sabe nadar), prueba girando de a poco.
+	var giro := PI / 3.0 * signf(randf() - 0.5)
+	for intento in 5:
+		var destino := Mundo.punto_navegable(global_position + lejos.rotated(Vector3.UP, giro * intento) * 8.0)
+		if Mundo.distancia_horizontal(destino, global_position) >= 3.0 and _destino_permitido(destino):
+			_ir_a(destino, velocidad_correr)
+			return
+
+
+## Los que no nadan solo pueden ir a puntos de su lado del río y fuera del agua.
+func _destino_permitido(punto: Vector3) -> bool:
+	return puede_nadar or (Mundo.mismo_lado_del_rio(global_position, punto) and not Mundo.en_agua(punto, 1.0))
 
 
 func perseguir(presa: Node3D) -> void:
@@ -144,17 +209,89 @@ func _atrapar(presa) -> void:
 	saciar()
 
 
+## Muere atrapado por otro animal (zorro o cazador): desaparece enseguida.
 func morir() -> void:
 	if not vivo:
 		return
 	vivo = false
-	# Salir de los grupos para que nadie más lo elija como presa.
+	_salir_de_los_grupos()
+	$Colision.set_deferred("disabled", true)
+	_desaparecer(0.4)
+
+
+## Recibe un zarpazo del yaguareté. Si le quedan fuerzas, escapa corriendo.
+func recibir_golpe(atacante: Node3D) -> void:
+	if not vivo:
+		return
+	vida -= 1
+	_al_ser_atacado(atacante)
+	herido = true
+	var desde_el_atacante := global_position - atacante.global_position
+	Efectos.salpicadura(get_parent(), global_position + Vector3.UP * 0.5 * modelo.scale.y, desde_el_atacante)
+	# Pequeño sacudón para que se note el golpe.
+	var escala: Vector3 = modelo.scale
+	var tween := create_tween()
+	tween.tween_property(modelo, "scale", escala * 1.25, 0.06)
+	tween.tween_property(modelo, "scale", escala, 0.1)
+	if vida <= 0:
+		_abatir()
+	else:
+		_moviendose = false
+		huir_de(atacante)
+
+
+## Las especies pueden redefinirlo, por ejemplo para avisarle a su manada.
+func _al_ser_atacado(_atacante: Node3D) -> void:
+	pass
+
+
+## El yaguareté se lo come: devuelve cuánto alimenta (0 si ya no está disponible).
+func ser_comido() -> float:
+	if not abatido:
+		return 0.0
+	abatido = false
+	remove_from_group("presas_abatidas")
+	_desaparecer(0.8)
+	return valor_alimenticio
+
+
+## Cae al suelo, de costado. Queda ahí para que el yaguareté se lo coma.
+func _abatir() -> void:
+	vivo = false
+	abatido = true
+	_salir_de_los_grupos()
+	add_to_group("presas_abatidas")
+	Efectos.gota(get_parent(), global_position, 3.5)  # charco debajo del animal caído
+	$Colision.set_deferred("disabled", true)
+	velocity = Vector3.ZERO
+	modelo.velocidad = 0.0
+	modelo.set_process(false)  # deja de mover las patas y la cola
+	var tween := create_tween().set_parallel()
+	tween.tween_property(modelo, "rotation:z", PI / 2.0, 0.35)
+	tween.tween_property(modelo, "position:y", 0.12, 0.35)
+	# Si nadie se lo come, después de un rato desaparece.
+	var espera := create_tween()
+	espera.tween_interval(SEGUNDOS_ABATIDO)
+	espera.tween_callback(_vencer_abatido)
+
+
+func _vencer_abatido() -> void:
+	if abatido:
+		abatido = false
+		remove_from_group("presas_abatidas")
+		_desaparecer(1.0)
+
+
+## Salir de los grupos para que nadie más lo elija como presa.
+func _salir_de_los_grupos() -> void:
 	for grupo in get_groups():
 		if not String(grupo).begins_with("_"):
 			remove_from_group(grupo)
-	$Colision.set_deferred("disabled", true)
+
+
+func _desaparecer(segundos: float) -> void:
 	var tween := create_tween()
-	tween.tween_property(modelo, "scale", Vector3.ONE * 0.01, 0.4)
+	tween.tween_property(modelo, "scale", Vector3.ONE * 0.01, segundos)
 	tween.tween_callback(queue_free)
 
 
@@ -203,6 +340,10 @@ func _cambiar_estado(nuevo: Estado) -> void:
 
 
 func _ir_a(punto: Vector3, velocidad: float) -> void:
+	# Los que no nadan nunca eligen un destino al otro lado del río.
+	if not _destino_permitido(punto):
+		_moviendose = false
+		return
 	agente.target_position = punto
 	_velocidad_actual = velocidad
 	_moviendose = true
@@ -228,6 +369,19 @@ func _mover(delta: float) -> void:
 				direccion = direccion.normalized()
 				horizontal = direccion * _velocidad_actual
 				modelo.rotation.y = lerp_angle(modelo.rotation.y, atan2(direccion.x, direccion.z), 8.0 * delta)
+
+	# Agua: los que no nadan se frenan en la orilla; los que nadan cambian de velocidad.
+	if Mundo.rio != null and horizontal != Vector3.ZERO:
+		if puede_nadar:
+			en_agua = Mundo.en_agua(global_position)
+			if en_agua:
+				horizontal *= multiplicador_en_agua
+		elif Mundo.en_agua(global_position + horizontal.normalized() * 0.8, 0.3):
+			horizontal = Vector3.ZERO
+			_moviendose = false
+	if puede_nadar:
+		var hundido := -profundidad_nado if en_agua else 0.0
+		modelo.position.y = lerpf(modelo.position.y, hundido, 5.0 * delta)
 
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z

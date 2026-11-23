@@ -5,6 +5,14 @@
 [ext_resource type="PackedScene" path="res://escenas/jugador.tscn" id="3_jugador"]
 [ext_resource type="PackedScene" path="res://escenas/marcador.tscn" id="4_marcador"]
 [ext_resource type="Script" path="res://scripts/menu_pausa.gd" id="5_menu_pausa"]
+[ext_resource type="Script" path="res://scripts/climax.gd" id="6_climax"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_rio.wav" id="8_rio"]
+[ext_resource type="Script" path="res://scripts/icono_ojo.gd" id="6_icono_ojo"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_musica_persecucion.mp3" id="9_musica_persecucion"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_musica_caza_inversa.wav" id="10_musica_caza_inversa"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_latidos.wav" id="11_latidos"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_golpe_dramatico.wav" id="12_golpe_dramatico"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_rugido.mp3" id="13_rugido"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 
@@ -15,10 +23,11 @@ sky_material = SubResource("SkyMat")
 background_mode = 2
 sky = SubResource("Sky")
 ambient_light_source = 3
+ambient_light_energy = 1.3
 tonemap_mode = 2
 fog_enabled = true
-fog_light_color = Color(0.62, 0.72, 0.68, 1)
-fog_density = 0.006
+fog_light_color = Color(0.42, 0.52, 0.42, 1)
+fog_density = 0.012
 
 [sub_resource type="NavigationMesh" id="NavMesh"]
 geometry_parsed_geometry_type = 1
@@ -27,20 +36,20 @@ cell_size = 0.25
 agent_radius = 0.75
 agent_height = 1.5
 agent_max_climb = 0.25
-filter_baking_aabb = AABB(-41, -1, -41, 82, 6, 82)
+filter_baking_aabb = AABB(-63, -1, -63, 126, 6, 126)
 
 [sub_resource type="PlaneMesh" id="Mesh_terreno"]
 material = ExtResource("2_mat_terreno")
-size = Vector2(200, 200)
+size = Vector2(300, 300)
 
 [sub_resource type="BoxShape3D" id="Shape_terreno"]
-size = Vector3(200, 1, 200)
+size = Vector3(300, 1, 300)
 
 [sub_resource type="BoxShape3D" id="Shape_limite_ns"]
-size = Vector3(82, 4, 1)
+size = Vector3(126, 4, 1)
 
 [sub_resource type="BoxShape3D" id="Shape_limite_eo"]
-size = Vector3(1, 4, 82)
+size = Vector3(1, 4, 126)
 
 [sub_resource type="StyleBoxFlat" id="BarraFondo"]
 bg_color = Color(0, 0, 0, 0.55)
@@ -56,6 +65,24 @@ corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 
+[sub_resource type="ButtonGroup" id="GrupoNiveles"]
+
+[sub_resource type="StyleBoxFlat" id="FondoCartelAdmin"]
+bg_color = Color(0.7, 0.08, 0.06, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.85, 0.3, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 14.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 6.0
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_script")
 
@@ -64,7 +91,9 @@ environment = SubResource("Entorno")
 
 [node name="Sol" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866, -0.4096, 0.2868, 0, 0.5736, 0.8192, -0.5, -0.7094, 0.4967, 0, 10, 0)
+light_energy = 1.3
 shadow_enabled = true
+directional_shadow_max_distance = 80.0
 
 [node name="Camara" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 13, 11)
@@ -89,24 +118,26 @@ collision_layer = 2
 collision_mask = 0
 
 [node name="Norte" type="CollisionShape3D" parent="Navegacion/Limites"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -40.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -62.5)
 shape = SubResource("Shape_limite_ns")
 
 [node name="Sur" type="CollisionShape3D" parent="Navegacion/Limites"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 40.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 62.5)
 shape = SubResource("Shape_limite_ns")
 
 [node name="Este" type="CollisionShape3D" parent="Navegacion/Limites"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40.5, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 62.5, 2, 0)
 shape = SubResource("Shape_limite_eo")
 
 [node name="Oeste" type="CollisionShape3D" parent="Navegacion/Limites"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40.5, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.5, 2, 0)
 shape = SubResource("Shape_limite_eo")
 
 [node name="Arboles" type="Node3D" parent="Navegacion"]
 
 [node name="ArbolesDecorativos" type="Node3D" parent="."]
+
+[node name="Sotobosque" type="Node3D" parent="."]
 
 [node name="Frutas" type="Node3D" parent="."]
 
@@ -114,12 +145,40 @@ shape = SubResource("Shape_limite_eo")
 
 [node name="Pajaros" type="Node3D" parent="."]
 
+[node name="Objetos" type="Node3D" parent="."]
+
 [node name="Jugador" parent="." instance=ExtResource("3_jugador")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 
 [node name="Marcador" parent="." instance=ExtResource("4_marcador")]
 
 [node name="Ambiente" type="AudioStreamPlayer" parent="."]
+
+[node name="SonidoRio" type="AudioStreamPlayer3D" parent="."]
+stream = ExtResource("8_rio")
+unit_size = 5.0
+max_distance = 35.0
+
+[node name="Climax" type="Node" parent="."]
+script = ExtResource("6_climax")
+
+[node name="MusicaPersecucion" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("9_musica_persecucion")
+volume_db = -4.0
+
+[node name="MusicaCazaInversa" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("10_musica_caza_inversa")
+volume_db = -4.0
+
+[node name="Latidos" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("11_latidos")
+volume_db = -6.0
+
+[node name="GolpeDramatico" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("12_golpe_dramatico")
+
+[node name="Rugido" type="AudioStreamPlayer" parent="Climax"]
+stream = ExtResource("13_rugido")
 
 [node name="TimerEcosistema" type="Timer" parent="."]
 wait_time = 3.0
@@ -148,6 +207,14 @@ theme_override_styles/fill = SubResource("BarraRelleno")
 value = 100.0
 show_percentage = false
 
+[node name="Ojo" type="Control" parent="HUD"]
+offset_left = 326.0
+offset_top = 28.0
+offset_right = 386.0
+offset_bottom = 76.0
+mouse_filter = 2
+script = ExtResource("6_icono_ojo")
+
 [node name="Contador" type="Label" parent="HUD"]
 offset_left = 16.0
 offset_top = 70.0
@@ -156,7 +223,28 @@ offset_bottom = 100.0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 22
-text = "Comida: 0 / 10"
+text = "Presas: 0 / 2"
+
+[node name="Nivel" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 100.0
+offset_right = 416.0
+offset_bottom = 124.0
+theme_override_colors/font_color = Color(0.85, 0.95, 0.8, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "Nivel 1"
+
+[node name="Estado" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 128.0
+offset_right = 516.0
+offset_bottom = 240.0
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
 
 [node name="Aviso" type="Label" parent="HUD"]
 anchors_preset = 5
@@ -171,7 +259,7 @@ theme_override_colors/font_color = Color(1, 0.32, 0.25, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_font_sizes/font_size = 30
-text = "¡Un oso te persigue! (Shift: correr)"
+text = "¡Un cazador te persigue! (Shift: correr)"
 horizontal_alignment = 1
 
 [node name="Ayuda" type="Label" parent="HUD"]
@@ -227,6 +315,29 @@ color = Color(1, 1, 1, 0.7)
 color = Color(1, 0.25, 0.2, 0.9)
 polygon = PackedVector2Array(0, -26, 20, 14, 0, 6, -20, 14)
 
+[node name="Anuncio" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 150.0
+offset_bottom = 230.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.6, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 52
+text = "¡Ahora cazás vos!"
+horizontal_alignment = 1
+
+[node name="Fundido" type="ColorRect" parent="HUD"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
 [node name="PantallaFinal" type="CanvasLayer" parent="."]
 process_mode = 3
 layer = 2
@@ -262,6 +373,24 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "Motivo"
 horizontal_alignment = 1
+
+[node name="Concientizacion" type="Label" parent="PantallaFinal/Fondo/Centro/Caja"]
+visible = false
+custom_minimum_size = Vector2(680, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.86, 0.55, 1)
+theme_override_font_sizes/font_size = 19
+text = "Dato real"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="BotonSiguiente" type="Button" parent="PantallaFinal/Fondo/Centro/Caja"]
+visible = false
+custom_minimum_size = Vector2(220, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Siguiente nivel"
 
 [node name="BotonReintentar" type="Button" parent="PantallaFinal/Fondo/Centro/Caja"]
 custom_minimum_size = Vector2(220, 50)
@@ -312,8 +441,51 @@ horizontal_alignment = 1
 [node name="Objetivo" type="Label" parent="MenuInicio/Fondo/Centro/Caja"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "Come 10 frutas sin morir de hambre ni ser devorado por un oso."
+text = "Cazá y comé 2 presas en cada nivel sin morir de hambre ni ser atrapado por un cazador."
 horizontal_alignment = 1
+
+[node name="Niveles" type="VBoxContainer" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Etiqueta" type="Label" parent="MenuInicio/Fondo/Centro/Caja/Niveles"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Nivel (se desbloquean al superar el anterior):"
+horizontal_alignment = 1
+
+[node name="Botones" type="HBoxContainer" parent="MenuInicio/Fondo/Centro/Caja/Niveles"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 10
+
+[node name="Nivel1" type="Button" parent="MenuInicio/Fondo/Centro/Caja/Niveles/Botones"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("GrupoNiveles")
+text = "1: Selva intacta"
+
+[node name="Nivel2" type="Button" parent="MenuInicio/Fondo/Centro/Caja/Niveles/Botones"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("GrupoNiveles")
+text = "2: Amenazada"
+
+[node name="Nivel3" type="Button" parent="MenuInicio/Fondo/Centro/Caja/Niveles/Botones"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("GrupoNiveles")
+text = "3: Degradada"
+
+[node name="Nivel4" type="Button" parent="MenuInicio/Fondo/Centro/Caja/Niveles/Botones"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("GrupoNiveles")
+text = "4: La persecución"
 
 [node name="Espacio" type="Control" parent="MenuInicio/Fondo/Centro/Caja"]
 custom_minimum_size = Vector2(0, 12)
@@ -372,6 +544,28 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "5"
 
+[node name="PantallaCompleta" type="CheckButton" parent="MenuInicio/Fondo/Centro/Caja"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 16
+text = "Pantalla completa (F11)"
+
+[node name="CartelAdmin" type="Label" parent="MenuInicio"]
+visible = false
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 56.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("FondoCartelAdmin")
+text = "MODO ADMIN"
+horizontal_alignment = 1
+
 [node name="MenuPausa" type="CanvasLayer" parent="."]
 process_mode = 3
 layer = 4
@@ -410,6 +604,12 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Continuar"
 
+[node name="PantallaCompleta" type="CheckButton" parent="MenuPausa/Fondo/Centro/Caja"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 18
+text = "Pantalla completa (F11)"
+
 [node name="BotonMenu" type="Button" parent="MenuPausa/Fondo/Centro/Caja"]
 custom_minimum_size = Vector2(260, 50)
 layout_mode = 2
@@ -438,3 +638,5 @@ text = "Salir del juego"
 [connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonContinuar" to="MenuPausa" method="_on_boton_continuar_pressed"]
 [connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonMenu" to="MenuPausa" method="_on_boton_menu_pressed"]
 [connection signal="pressed" from="MenuPausa/Fondo/Centro/Caja/BotonSalir" to="MenuPausa" method="_on_boton_salir_pressed"]
+[connection signal="mensaje" from="Jugador" to="." method="_on_jugador_mensaje"]
+[connection signal="pressed" from="PantallaFinal/Fondo/Centro/Caja/BotonSiguiente" to="." method="_on_boton_siguiente_pressed"]

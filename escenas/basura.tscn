@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/basura.gd" id="1_script"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_moscas.mp3" id="2_moscas"]
+
+[node name="Basura" type="Node3D" groups=["basura"]]
+script = ExtResource("1_script")
+
+[node name="Moscas" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+stream = ExtResource("2_moscas")
+volume_db = -4.0
+unit_size = 1.5
+max_distance = 7.0

@@ -74,7 +74,16 @@ func _volar_a_otro_arbol() -> void:
 
 
 func _cantar() -> void:
-	# Los sonidos se agregan más adelante: basta con asignar un "Stream" al nodo Canto.
-	if canto.stream:
-		canto.pitch_scale = randf_range(0.9, 1.2)
+	# La grabación es larga (muchos cantos seguidos): cada vez suena un pedacito de 2 a 4 s
+	# desde un punto al azar, así cada pájaro canta distinto.
+	if canto.stream == null or not Mundo.hay_audio():
+		return
+	var largo := canto.stream.get_length()
+	canto.pitch_scale = randf_range(0.9, 1.2)
+	if largo <= 6.0:
 		canto.play()
+		return
+	canto.play(randf() * (largo - 4.0))
+	await get_tree().create_timer(randf_range(2.0, 4.0), false).timeout
+	if is_instance_valid(canto):
+		canto.stop()

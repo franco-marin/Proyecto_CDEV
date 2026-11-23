@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/animales/herbivoro.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/modelo_animal.gd" id="2_modelo"]
+
+[sub_resource type="CylinderShape3D" id="Forma"]
+height = 0.7
+radius = 0.45
+
+[node name="Carpincho" type="CharacterBody3D" groups=["carpinchos", "herbivoros", "presas"]]
+collision_layer = 8
+collision_mask = 3
+script = ExtResource("1_script")
+velocidad_caminar = 1.5
+velocidad_correr = 5.0
+radio_deambular = 8.0
+radio_ataque = 1.0
+vida = 2
+valor_alimenticio = 45.0
+puede_nadar = true
+multiplicador_en_agua = 0.9
+profundidad_nado = 0.3
+distancia_miedo_jugador = 7.0
+distancia_miedo_carnivoros = 3.0
+vive_cerca_del_rio = true
+
+[node name="Colision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+shape = SubResource("Forma")
+
+[node name="Modelo" type="Node3D" parent="."]
+script = ExtResource("2_modelo")
+tamano = 0.8
+color_cuerpo = Color(0.5, 0.35, 0.22, 1)
+color_detalle = Color(0.32, 0.22, 0.14, 1)
+largo_cuerpo = 1.1
+alto_cuerpo = 0.55
+largo_patas = 0.25
+altura_cabeza = 0.2
+cola = 4
+
+[node name="Agente" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 0.5
+path_height_offset = 0.5

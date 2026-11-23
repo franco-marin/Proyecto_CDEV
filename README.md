@@ -1,8 +1,32 @@
 # Bosque Hambriento
 
-Juego 3D hecho con **Godot 4.7**. Sos un herbívoro grande en un bosque: comé 10 frutas
-sin morir de hambre y sin que te alcance un oso. Se puede jugar en tercera persona
-(click derecho para moverse) o en primera persona (WASD + mouse).
+Juego 3D hecho con **Godot 4.7**. Sos un yaguareté en la selva paranaense: en cada nivel
+tenés que cazar y comer 2 presas (tapires, pecaríes, corzuelas, carpinchos, osos
+hormigueros, ocelotes o yacarés) sin morir de hambre y sin que te atrape un cazador.
+Primero hay que abatirlas a zarpazos y después comerlas. La maleza te esconde y el río
+—que cruzás nadando— es una vía de escape, porque los cazadores no lo cruzan.
+
+Se puede jugar en tercera persona (click derecho para moverse y cazar) o en primera
+persona (WASD + mouse, click izquierdo para el zarpazo y E para comer).
+
+## Niveles
+
+En los niveles 1 a 3 el mapa se genera al azar en cada partida, siempre con un río. El
+nivel 4 es el final: un pasillo lineal.
+
+| Nivel | Selva | Peligros |
+|-------|-------|----------|
+| 1: Selva intacta | Selva densa, mucha maleza, animales y pájaros, río celeste | Yacarés en el río |
+| 2: Selva amenazada | Menos árboles y maleza, primeros tocones y árboles talados, menos animales y pájaros, río verdoso | 2 cazadores, basura (te enferma si pasás a menos de 1 m) |
+| 3: Selva degradada | Selva rala con muchos árboles talados, poca maleza, pocos animales y casi sin pájaros, río sucio | 3 cazadores, más basura y trampas (10 s sin poder correr) |
+| 4: La persecución | Un sendero entre paredes de cañón de piedra, selva cerrada y rocas grandes | 3 cazadores que te persiguen (no se puede perder) |
+
+**El final (nivel 4):** empezás en una punta del pasillo y ves llegar a un cazador; se le
+suman dos más y empiezan a disparar. Hay que dar media vuelta y correr: cada vez van más
+rápido y te alcanzan (si en 20 s no lo lograron, aparece uno detrás tuyo). Te rodean, al
+cazador se le traba el arma y empieza la **caza inversa**: los cazadores huyen por el
+pasillo, al principio tan rápido como vos, y en 7 s se van frenando hasta que alcanzás a
+uno. En este nivel la barra de hambre está llena y no se puede perder.
 
 ## Cómo abrirlo
 

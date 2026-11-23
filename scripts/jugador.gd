@@ -1,23 +1,45 @@
 extends CharacterBody3D
-## El jugador: un herbívoro grande que camina, corre y come fruta para no morir de hambre.
+## El jugador: un yaguareté, el depredador más grande de la selva. Para no morir de
+## hambre caza animales: primero los abate a zarpazos y, cuando están en el suelo,
+## se los come. Puede cazar a todos los animales excepto a los cazadores.
 
 signal hambre_cambio(valor: float, maximo: float)
 signal comio(total: int)
 signal llego_al_destino
 signal murio(motivo: String)
+## Avisos para mostrar en pantalla (mordida de yacaré, trampa...).
+signal mensaje(texto: String)
 
 @export var velocidad_caminar := 3.5
 @export var velocidad_correr := 7.0
 @export var velocidad_giro := 8.0
 
+@export_group("Caza")
+## Hasta dónde llega el zarpazo (medido desde el centro del yaguareté).
+@export var alcance_zarpazo := 1.9
+## Segundos entre un zarpazo y el siguiente.
+@export var espera_entre_zarpazos := 0.5
+## Qué tan centrada tiene que estar la presa en la mirada para alcanzarla (grados).
+@export var angulo_de_ataque := 45.0
+@export var distancia_para_comer := 1.5
+
 @export_group("Hambre")
 @export var hambre_maxima := 100.0
 ## Segundos que tarda la barra en vaciarse caminando (o quieto).
-@export var segundos_hasta_morir := 60.0
+@export var segundos_hasta_morir := 90.0
 ## Cuánto más rápido baja el hambre al correr.
 @export var gasto_al_correr := 3.0
-@export var recuperacion_por_fruta := 35.0
-@export var distancia_para_comer := 1.8
+
+@export_group("Entorno")
+## Velocidad nadando respecto de la de caminar (en el agua no se puede correr).
+@export var multiplicador_nado := 0.6
+## Cuánto se hunde el cuerpo al nadar (el suelo tapa lo que queda abajo).
+@export var profundidad_nado := 0.42
+## A menos de esta distancia de una planta del sotobosque, el yaguareté está oculto.
+@export var radio_cobertura := 1.5
+## A menos de esta distancia de la basura, el hambre baja más rápido.
+@export var distancia_basura := 1.0
+@export var gasto_por_basura := 5.0
 
 @export_group("Primera persona")
 ## Radianes que gira la cámara por cada píxel que se mueve el mouse.
@@ -26,13 +48,29 @@ signal murio(motivo: String)
 @export var angulo_maximo_arriba := 60.0
 ## Cuánto sube y baja la cámara al caminar.
 @export var balanceo := 0.06
-## Qué tan centrada tiene que estar la fruta en la mirada para poder comerla (grados).
-@export var angulo_para_comer := 35.0
 
 var hambre: float
-var frutas_comidas := 0
+var presas_comidas := 0
 var vivo := true
 var primera_persona := false
+## Estado del entorno (lo leen la IA de los animales y el HUD).
+var nadando := false
+var oculto := false
+var cerca_de_basura := false
+## Segundos que le quedan sin poder correr por haber pisado una trampa.
+var segundos_sin_correr := 0.0
+
+## Clímax (lo controla climax.gd). En todo el clímax no caza, no come, el hambre no baja
+## y los cazadores no lo pueden atrapar: así todos llegan a ver la caza inversa.
+var modo_climax := false
+## Acorralado: no se puede mover y la mirada va sola hacia "punto_de_atencion".
+var quieto_forzado := false
+var punto_de_atencion = null  # Vector3 o null
+## Caza inversa: recupera el instinto y corre más rápido.
+var furia := false
+const MULTIPLICADOR_FURIA := 1.2
+## Caza inversa en tercera persona: lo sigue corriendo (click derecho sobre el cazador).
+var _seguido: Node3D = null
 
 var _yaw := 0.0  # giro horizontal de la mirada
 var _pitch := 0.0  # inclinación vertical de la mirada
@@ -40,18 +78,25 @@ var _fase_balanceo := 0.0
 var _moviendose := false
 var _corriendo := false
 var _comiendo := false
-var _fruta_objetivo = null
+var _espera_zarpazo := 0.0
+var _reloj_entorno := 0.0
+## Presa elegida en tercera persona: si está viva la persigue y la ataca; si está
+## abatida va a comérsela. Sin tipo a propósito (es un AnimalIA).
+var _presa = null
 var _gravedad: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 @onready var modelo: Node3D = $Modelo
 @onready var animacion: AnimationPlayer = $AnimationPlayer
 @onready var agente: NavigationAgent3D = $Agente
+## Golpe del zarpazo cuando le pega a una presa.
+@onready var impacto: AudioStreamPlayer3D = $Impacto
 ## La cámara de primera persona cuelga de "Ojos". No dibuja la capa visual 2
 ## (la cabeza del modelo) para no ver su interior. En su lugar, un hocico pegado
 ## a la cámara se ve siempre debajo de la vista, como la propia nariz.
 @onready var ojos: Node3D = $Ojos
 @onready var camara_primera_persona: Camera3D = $Ojos/Camara
 @onready var hocico_primera_persona: MeshInstance3D = $Ojos/Camara/HocicoPrimeraPersona
+@onready var zarpa_primera_persona: Node3D = $Ojos/Camara/ZarpaPrimeraPersona
 @onready var _altura_ojos := ojos.position.y
 @onready var _altura_hocico := hocico_primera_persona.position.y
 
@@ -73,14 +118,16 @@ func configurar_primera_persona(activar: bool, sensibilidad: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not primera_persona or not vivo:
 		return
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not quieto_forzado:
 		_yaw -= event.relative.x * sensibilidad_mouse
 		_pitch = clampf(_pitch - event.relative.y * sensibilidad_mouse,
 			-deg_to_rad(angulo_maximo_abajo), deg_to_rad(angulo_maximo_arriba))
-	elif event.is_action_pressed("comer") and not _comiendo:
-		var fruta := fruta_al_alcance()
-		if fruta:
-			_comer(fruta)
+	elif event.is_action_pressed("atacar"):
+		zarpazo()
+	elif event.is_action_pressed("comer") and not _comiendo and not modo_climax:
+		var abatida := presa_al_alcance(false)
+		if abatida:
+			_comer(abatida)
 
 
 ## Cámara de primera persona: orientación con el mouse y balanceo al caminar.
@@ -106,43 +153,92 @@ func _process(delta: float) -> void:
 	camara_primera_persona.position.x = lerpf(camara_primera_persona.position.x, lado, 10.0 * delta)
 
 
-## La fruta que está cerca y frente a la mirada, o null si no hay ninguna.
-func fruta_al_alcance() -> Node3D:
-	var frente := Vector3(sin(_yaw), 0, cos(_yaw))
+# --- Caza ------------------------------------------------------------------------------
+
+## Golpe con la pata delantera. Si hay una presa viva al alcance y de frente, la lastima.
+func zarpazo() -> void:
+	if not vivo or _comiendo or _espera_zarpazo > 0.0 or modo_climax:
+		return
+	_espera_zarpazo = espera_entre_zarpazos
+	animacion.speed_scale = 1.0
+	animacion.play("zarpazo", 0.05)
+	if primera_persona:
+		_animar_zarpa_primera_persona()
+	var presa := presa_al_alcance(true)
+	if presa:
+		presa.recibir_golpe(self)
+		if impacto.stream and Mundo.hay_audio():
+			impacto.pitch_scale = randf_range(0.9, 1.1)
+			impacto.play()
+
+
+## La presa más cercana que está al alcance y de frente, o null.
+## viva = true busca presas para atacar; viva = false busca presas abatidas para comer.
+func presa_al_alcance(viva: bool) -> Node3D:
+	var mirada := _yaw if primera_persona else modelo.rotation.y
+	var frente := Vector3(sin(mirada), 0, cos(mirada))
 	var mejor: Node3D = null
-	var mejor_distancia := distancia_para_comer + 0.7
-	for nodo in get_tree().get_nodes_in_group("comida"):
-		var fruta := nodo as Node3D
-		var hacia := fruta.global_position - global_position
+	var mejor_distancia := alcance_zarpazo if viva else distancia_para_comer + 0.5
+	for nodo in get_tree().get_nodes_in_group("presas" if viva else "presas_abatidas"):
+		var presa := nodo as Node3D
+		var hacia := presa.global_position - global_position
 		hacia.y = 0.0
 		var distancia := hacia.length()
 		if distancia > mejor_distancia:
 			continue
-		if distancia > 0.01 and rad_to_deg(frente.angle_to(hacia)) > angulo_para_comer:
+		if distancia > 0.3 and rad_to_deg(frente.angle_to(hacia)) > angulo_de_ataque:
 			continue
-		mejor = fruta
+		mejor = presa
 		mejor_distancia = distancia
 	return mejor
+
+
+## Para el aviso en pantalla de primera persona: qué se puede hacer ahora.
+func accion_disponible() -> String:
+	if _comiendo or modo_climax:
+		return ""
+	if presa_al_alcance(false):
+		return "E: comer"
+	if presa_al_alcance(true):
+		return "Click: zarpazo"
+	return ""
 
 
 # --- Órdenes de tercera persona (las llama la escena principal) -----------------
 
 func ir_a(punto: Vector3, correr := false) -> void:
-	if not vivo or _comiendo:
+	if not vivo or _comiendo or quieto_forzado:
 		return
-	_fruta_objetivo = null
+	_presa = null
+	_seguido = null
 	_navegar(punto, correr)
 
 
-func ir_a_comer(fruta: Node3D, correr := false) -> void:
+## Persigue a una presa y la ataca; cuando cae, va a comérsela.
+func ir_a_cazar(presa: Node3D, correr := false) -> void:
+	if modo_climax:
+		ir_a(presa.global_position, correr)  # en el clímax no se caza: solo camina hasta ahí
+		return
 	if not vivo or _comiendo:
 		return
-	_fruta_objetivo = fruta
-	_navegar(fruta.global_position, correr)
+	_presa = presa
+	_navegar(presa.global_position, correr)
 
 
-func ser_devorado() -> void:
-	_morir("devorado")
+## Caza inversa en tercera persona: corre detrás del cazador sin tener que hacer click
+## a cada rato.
+func perseguir_a(nodo: Node3D, correr := true) -> void:
+	if not vivo or quieto_forzado:
+		return
+	_presa = null
+	_seguido = nodo
+	_navegar(nodo.global_position, correr)
+
+
+func ser_capturado() -> void:
+	if modo_climax:
+		return
+	_morir("capturado")
 
 
 func puede_ser_objetivo() -> bool:
@@ -150,7 +246,44 @@ func puede_ser_objetivo() -> bool:
 
 
 func esta_corriendo() -> bool:
-	return _moviendose and _corriendo
+	return _moviendose and _corriendo and puede_correr()
+
+
+## Nadando o con una trampa en la pata no se puede correr.
+func puede_correr() -> bool:
+	return not nadando and segundos_sin_correr <= 0.0
+
+
+## Un yacaré lo mordió mientras nadaba.
+func recibir_mordida(cantidad: float) -> void:
+	if not vivo:
+		return
+	hambre = maxf(hambre - cantidad, 0.0)
+	mensaje.emit("¡Un yacaré te mordió!")
+	var escala := modelo.scale
+	var tween := create_tween()
+	tween.tween_property(modelo, "scale", escala * 0.85, 0.08)
+	tween.tween_property(modelo, "scale", escala, 0.15)
+
+
+## Pisó una trampa: no puede correr durante unos segundos.
+func atrapar_en_trampa(segundos: float) -> void:
+	if not vivo:
+		return
+	segundos_sin_correr = segundos
+	mensaje.emit("¡Pisaste una trampa!")
+
+
+## Textos para el HUD con lo que le está pasando ahora.
+func estados_activos() -> Array[String]:
+	var estados: Array[String] = []
+	if nadando:
+		estados.append("Nadando")
+	if segundos_sin_correr > 0.0:
+		estados.append("¡Trampa! No podés correr (%d s)" % ceili(segundos_sin_correr))
+	if cerca_de_basura:
+		estados.append("Basura cerca: te enferma")
+	return estados
 
 
 # --- Lógica de cada frame --------------------------------------------------------
@@ -160,18 +293,25 @@ func _physics_process(delta: float) -> void:
 		return
 	if not is_on_floor():
 		velocity.y -= _gravedad * delta
+	_espera_zarpazo = maxf(_espera_zarpazo - delta, 0.0)
+	segundos_sin_correr = maxf(segundos_sin_correr - delta, 0.0)
+	_revisar_entorno(delta)
 
 	_gastar_hambre(delta)
 	if not vivo:
 		return
 
 	var horizontal := Vector3.ZERO
-	if _comiendo:
+	if quieto_forzado:
+		_moviendose = false
+		_mirar_al_punto_de_atencion(delta)
+	elif _comiendo:
 		_moviendose = false
 	elif primera_persona:
 		horizontal = _movimiento_primera_persona()
 	else:
-		_revisar_fruta_objetivo()
+		_seguir_presa()
+		_seguir_al_seguido()
 		horizontal = _calcular_movimiento(delta)
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
@@ -179,33 +319,112 @@ func _physics_process(delta: float) -> void:
 	_actualizar_animacion(horizontal.length())
 
 
+## Agua, maleza y basura alrededor. Nadar se revisa en cada frame; lo demás, 5 veces por segundo.
+func _revisar_entorno(delta: float) -> void:
+	nadando = Mundo.en_agua(global_position)
+	# Al nadar el cuerpo se hunde (y en primera persona, la vista queda a ras del agua).
+	modelo.position.y = lerpf(modelo.position.y, -profundidad_nado if nadando else 0.0, 6.0 * delta)
+	if primera_persona and not _comiendo:
+		var altura := _altura_ojos - (profundidad_nado * 0.8 if nadando else 0.0)
+		ojos.position.y = lerpf(ojos.position.y, altura, 6.0 * delta)
+
+	_reloj_entorno -= delta
+	if _reloj_entorno > 0.0:
+		return
+	_reloj_entorno = 0.2
+	oculto = not nadando and Mundo.hay_cobertura(global_position, radio_cobertura)
+	cerca_de_basura = false
+	for nodo in get_tree().get_nodes_in_group("basura"):
+		if Mundo.distancia_horizontal((nodo as Node3D).global_position, global_position) <= distancia_basura:
+			cerca_de_basura = true
+			break
+
+
+func _velocidad_actual() -> float:
+	if nadando:
+		return velocidad_caminar * multiplicador_nado
+	var corriendo := velocidad_correr * (MULTIPLICADOR_FURIA if furia else 1.0)
+	return corriendo if _corriendo and puede_correr() else velocidad_caminar
+
+
+## Barra de hambre llena (nivel 4: ahí el hambre no importa y no baja).
+func llenar_hambre() -> void:
+	hambre = hambre_maxima
+	hambre_cambio.emit(hambre, hambre_maxima)
+
+
 func _gastar_hambre(delta: float) -> void:
+	if modo_climax:
+		return  # en el clímax la barra queda como está
 	var gasto := hambre_maxima / segundos_hasta_morir
 	if esta_corriendo():
 		gasto *= gasto_al_correr
+	if cerca_de_basura:
+		gasto += gasto_por_basura
 	hambre = maxf(hambre - gasto * delta, 0.0)
 	hambre_cambio.emit(hambre, hambre_maxima)
 	if hambre <= 0.0:
 		_morir("hambre")
 
 
-func _revisar_fruta_objetivo() -> void:
-	if _fruta_objetivo == null:
+## Tercera persona: persigue a la presa elegida, la ataca al alcanzarla y,
+## cuando cae, se acerca y se la come.
+func _seguir_presa() -> void:
+	if _presa == null:
 		return
-	if not is_instance_valid(_fruta_objetivo) or not _fruta_objetivo.puede_ser_objetivo():
-		# Otro animal llegó antes y se la comió.
-		_fruta_objetivo = null
+	if not is_instance_valid(_presa) or not (_presa.vivo or _presa.abatido):
+		# Desapareció (otro animal la cazó o ya se la comieron).
+		_presa = null
 		_detener()
 		return
-	if Mundo.distancia_horizontal(global_position, _fruta_objetivo.global_position) <= distancia_para_comer:
-		_comer(_fruta_objetivo)
+	var distancia := Mundo.distancia_horizontal(global_position, _presa.global_position)
+	if _presa.abatido:
+		if distancia <= distancia_para_comer:
+			_comer(_presa)
+		else:
+			agente.target_position = _presa.global_position
+			_moviendose = true
+	elif distancia <= alcance_zarpazo - 0.3:
+		_mirar_hacia(_presa.global_position)
+		_moviendose = false
+		zarpazo()
+	else:
+		agente.target_position = _presa.global_position  # la presa se mueve: actualizar el destino
+		_moviendose = true
+
+
+## Tercera persona, caza inversa: el destino se actualiza porque el cazador se mueve.
+func _seguir_al_seguido() -> void:
+	if _seguido == null:
+		return
+	if not is_instance_valid(_seguido):
+		_seguido = null
+		_detener()
+		return
+	agente.target_position = _seguido.global_position
+	_moviendose = true
+
+
+## Acorralado: la mirada (o el cuerpo, en tercera persona) gira sola hacia lo que pasa.
+func _mirar_al_punto_de_atencion(delta: float) -> void:
+	if punto_de_atencion == null:
+		return
+	var hacia: Vector3 = punto_de_atencion - global_position
+	if Vector2(hacia.x, hacia.z).length() < 0.01:
+		return
+	var giro := atan2(hacia.x, hacia.z)
+	modelo.rotation.y = lerp_angle(modelo.rotation.y, giro, 4.0 * delta)
+	if primera_persona:
+		_yaw = lerp_angle(_yaw, giro, 4.0 * delta)
+		_pitch = lerpf(_pitch, 0.0, 4.0 * delta)
 
 
 func _calcular_movimiento(delta: float) -> Vector3:
 	if not _moviendose:
 		return Vector3.ZERO
 	if agente.is_navigation_finished():
-		_detener()
+		if _presa == null and _seguido == null:
+			_detener()
 		return Vector3.ZERO
 	var direccion := agente.get_next_path_position() - global_position
 	direccion.y = 0.0
@@ -213,7 +432,7 @@ func _calcular_movimiento(delta: float) -> Vector3:
 		return Vector3.ZERO
 	direccion = direccion.normalized()
 	modelo.rotation.y = lerp_angle(modelo.rotation.y, atan2(direccion.x, direccion.z), velocidad_giro * delta)
-	return direccion * (velocidad_correr if _corriendo else velocidad_caminar)
+	return direccion * _velocidad_actual()
 
 
 ## WASD relativo hacia donde mira el animal. Solo se corre hacia adelante (Shift + W).
@@ -225,22 +444,23 @@ func _movimiento_primera_persona() -> Vector3:
 	_corriendo = Input.is_action_pressed("correr") and avance > 0.0
 	var frente := Vector3(sin(_yaw), 0, cos(_yaw))
 	var derecha := Vector3(-cos(_yaw), 0, sin(_yaw))
-	var velocidad_avance := velocidad_correr if _corriendo else velocidad_caminar
-	return frente * avance * velocidad_avance + derecha * lateral * velocidad_caminar
+	var velocidad_avance := _velocidad_actual()
+	var velocidad_lateral := velocidad_caminar * (multiplicador_nado if nadando else 1.0)
+	return frente * avance * velocidad_avance + derecha * lateral * velocidad_lateral
 
 
-func _comer(fruta) -> void:
-	_fruta_objetivo = null
+func _comer(abatida) -> void:
+	_presa = null
 	_detener()
-	if not fruta.comer():
-		return
+	var alimento: float = abatida.ser_comido()
+	if alimento <= 0.0:
+		return  # otro llegó antes
 	_comiendo = true
-	var hacia_fruta: Vector3 = fruta.global_position - global_position
-	modelo.rotation.y = atan2(hacia_fruta.x, hacia_fruta.z)
+	_mirar_hacia(abatida.global_position)
 	animacion.speed_scale = 1.0
 	animacion.play("comer", 0.1)
 	if primera_persona:
-		# La vista baja hacia la fruta y vuelve a subir, al ritmo de la animación.
+		# La vista baja hacia la presa y vuelve a subir, al ritmo de la animación.
 		var tween := create_tween()
 		tween.tween_property(ojos, "position:y", _altura_ojos - 0.45, 0.25)
 		tween.tween_interval(0.3)
@@ -249,16 +469,36 @@ func _comer(fruta) -> void:
 	_comiendo = false
 	if not vivo:
 		return
-	hambre = minf(hambre + recuperacion_por_fruta, hambre_maxima)
-	frutas_comidas += 1
-	comio.emit(frutas_comidas)
+	hambre = minf(hambre + alimento, hambre_maxima)
+	presas_comidas += 1
+	comio.emit(presas_comidas)
+
+
+## En primera persona se ve la pata cruzar la pantalla durante el zarpazo.
+func _animar_zarpa_primera_persona() -> void:
+	zarpa_primera_persona.visible = true
+	zarpa_primera_persona.position = Vector3(0.45, -0.22, -0.5)
+	zarpa_primera_persona.rotation = Vector3(0.3, 0.4, 0.7)
+	var tween := create_tween().set_parallel()
+	tween.tween_property(zarpa_primera_persona, "position", Vector3(-0.35, -0.42, -0.6), 0.16)
+	tween.tween_property(zarpa_primera_persona, "rotation:z", -0.5, 0.16)
+	tween.chain().tween_callback(zarpa_primera_persona.hide)
+
+
+func _mirar_hacia(punto: Vector3) -> void:
+	var hacia := punto - global_position
+	if Vector2(hacia.x, hacia.z).length() < 0.01:
+		return
+	modelo.rotation.y = atan2(hacia.x, hacia.z)
+	if primera_persona:
+		_yaw = modelo.rotation.y
 
 
 func _actualizar_animacion(velocidad: float) -> void:
-	if _comiendo:
+	if _comiendo or (animacion.current_animation == "zarpazo" and animacion.is_playing()):
 		return
 	if velocidad > 0.1:
-		animacion.speed_scale = 1.8 if _corriendo else 1.0
+		animacion.speed_scale = 1.8 if esta_corriendo() else 1.0
 		animacion.play("caminar", 0.2)
 	else:
 		animacion.speed_scale = 1.0

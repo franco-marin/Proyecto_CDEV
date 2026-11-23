@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/pajaro.gd" id="1_script"]
+[ext_resource type="AudioStream" path="res://sonidos/sonido_canto_pajaros.wav" id="2_canto"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_pico"]
 albedo_color = Color(1, 0.75, 0.15, 1)
@@ -59,4 +60,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0, 0)
 mesh = SubResource("Mesh_ala")
 
 [node name="Canto" type="AudioStreamPlayer3D" parent="."]
+stream = ExtResource("2_canto")
+volume_db = -6.0
 unit_size = 15.0
